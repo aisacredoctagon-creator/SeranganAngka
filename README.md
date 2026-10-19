@@ -1,7 +1,31 @@
 # Serangan Angka
 
-Game ritme matematika (HTML + CSS + JavaScript, tanpa build). Buka `index.html` di browser lalu klik **Main**.
-Untuk pratinjau lokal: `node serve.js` (http://localhost:8123).
+Game ritme dengan soal matematika yang jatuh ke garis target mengikuti beat musik. Pemain menjawab lewat lane di bawah layar (sentuh, klik, atau keyboard). Dibuat untuk pelajar usia 12–16 tahun dan nyaman dimainkan di ponsel maupun desktop.
+
+Dibuat dengan HTML + CSS + JavaScript murni (tanpa build, tanpa dependensi).
+
+**Main online:** https://aisacredoctagon-creator.github.io/SeranganAngka/
+
+## Menjalankan secara lokal
+- Cara cepat: buka `index.html` di browser lalu klik **Main**.
+- Disarankan lewat server lokal (butuh Node.js, diperlukan bila memakai file audio sendiri): `node serve.js`, lalu buka http://localhost:8123.
+- Tes otomatis: buka `/tests/audio-test.html` dan `/tests/problems-test.html` di server lokal; judul halaman berubah menjadi "ALL PASS" bila lulus.
+
+## Struktur folder
+```
+index.html              halaman utama (menu, game, hasil)
+css/style.css           gaya: layout fluid, mobile-first
+js/config.js            semua pengaturan gameplay (BPM, nyawa, tahap, jendela waktu, ...)
+js/music.js             data musik per level (kunci, chord, melodi)
+js/audio.js             mesin audio Web Audio (backing, melodi, nada salah)
+js/game.js              loop permainan, penilaian, nyawa, jeda
+js/problems.js          pembuat soal bilangan dan desimal
+js/fractions.js         notasi pecahan bertumpuk + pembuat soal pecahan
+js/ui.js                menu, layar hasil, penyimpanan, kontrol suara
+tests/                  tes otomatis audio dan generator soal
+assets/audio/           tempat file musik latar opsional (lihat README di dalamnya)
+serve.js                server statis kecil untuk pengembangan lokal
+```
 
 ## Cara main
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
@@ -37,9 +61,9 @@ Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`, `?unlock=all`. Mode gera
 ## Level Pecahan & Desimal
 - Hanya empat operasi dasar (tambah, kurang, kali, bagi). Jenis soal lain (sederhanakan, bandingkan, senilai, campuran, desimal/persen) tetap ada di `js/fractions.js` dan bisa diaktifkan lagi lewat bobot `types` di `fracTiers`.
 - Pecahan ditulis dengan garis pecahan (pembilang di atas, penyebut di bawah) di soal, lane, layar review, dan kartu menu. Di data, pecahan ditulis sebagai token `{3/4}`, pecahan campuran `{2 1/3}`, angka yang dicari `{?/4}`; `NA.fmt.html()` mengubahnya menjadi tampilan bertumpuk (`js/fractions.js`).
-- 13 jenis soal pecahan: penjumlahan/pengurangan (penyebut sama, lalu berbeda), perkalian, pembagian, menyederhanakan, membandingkan (`<` `=` `>`), pecahan senilai (`1/2 = ?/4`), campuran ↔ biasa, pecahan → desimal, pecahan → persen. Jenis dan tingkat kesulitan per tahap diatur di `levels[5].fracTiers` (penyebut, bobot jenis soal).
+- Jenis soal yang dipakai: penjumlahan/pengurangan (penyebut sama, lalu berbeda), perkalian, dan pembagian. Generator juga punya 7 jenis lain yang tidak dipakai secara default: menyederhanakan, membandingkan (`<` `=` `>`), pecahan senilai (`1/2 = ?/4`), campuran ↔ biasa, pecahan → desimal, pecahan → persen. Jenis dan tingkat kesulitan per tahap diatur di `levels[5].fracTiers` (penyebut, bobot jenis soal).
 - Pengecoh = kesalahan umum dulu (menjumlahkan pembilang dan penyebut, lupa menyederhanakan, membalik pecahan yang salah, menulis "12/3" untuk 1 2/3), baru nilai di sekitarnya. Tidak ada dua pilihan yang bernilai sama, jadi jawaban benar selalu unik (khusus "sederhanakan": hanya satu pilihan yang sudah paling sederhana).
-- Soal perbandingan hanya punya 3 jawaban, jadi lane ke-4 dikosongkan (diredupkan, ditekan tidak berefek).
+- Bila jenis soal perbandingan diaktifkan, jawabannya hanya 3 (`<` `=` `>`), jadi lane ke-4 dikosongkan (diredupkan, ditekan tidak berefek).
 - Desimal: `levels[6].decTiers` mengatur tiap tahap (digit bagian bulat, jumlah desimal, pengurangan, desimal berbeda-beda).
 - Pecahan dan Desimal memakai 4 ketukan per soal (`noteEveryBeats: 4`) karena soalnya butuh waktu berpikir lebih lama; ubah di `js/config.js` bila perlu.
 - Tes: `http://localhost:8123/tests/problems-test.html` menghitung ulang jawaban setiap soal dengan aritmetika pecahan eksak dan memastikan tepat satu pilihan yang benar (49.000 soal, semua level).
