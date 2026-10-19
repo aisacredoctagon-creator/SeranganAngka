@@ -214,7 +214,14 @@
     launching = true;
     try {
       A.init();                                       // inside the click, so the browser allows audio
-      await Promise.race([A.prepare(level, NA.bpmFor(level, diff)), new Promise((r) => setTimeout(r, 4000))]);
+      const btn = $('btn-play');
+      btn.disabled = true;                            // (brief) while the audio device wakes up
+      // Start the game only when the audio clock is really running, so beat and visuals begin together.
+      await Promise.race([
+        Promise.all([A.prepare(level, NA.bpmFor(level, diff)), A.ready(3000)]),
+        new Promise((r) => setTimeout(r, 5000)),
+      ]);
+      btn.disabled = false;
       show('game');
       G.start(level, diff);
     } finally { launching = false; }
@@ -296,13 +303,14 @@
   document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   document.addEventListener('contextmenu', (e) => { if (document.body.classList.contains('playing')) e.preventDefault(); });
   // Mobile browsers only start audio from a user gesture: create + resume the AudioContext on the very first touch/key.
+  // Firefox only counts click / keydown / touchend as a gesture (not pointerdown), so listen to all of them and keep
+  // trying until the context is really running.
+  const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
   const unlockAudio = () => {
     A.init();
-    window.removeEventListener('pointerdown', unlockAudio, true);
-    window.removeEventListener('keydown', unlockAudio, true);
+    if (A.isRunning()) UNLOCK_EVENTS.forEach((ev) => window.removeEventListener(ev, unlockAudio, true));
   };
-  window.addEventListener('pointerdown', unlockAudio, true);
-  window.addEventListener('keydown', unlockAudio, true);
+  UNLOCK_EVENTS.forEach((ev) => window.addEventListener(ev, unlockAudio, true));
 
   // ---- show unexpected errors on screen instead of failing silently ---------------------
   function showError(msg) {

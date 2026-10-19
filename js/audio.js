@@ -57,6 +57,30 @@
   // Call from any user input: browsers only allow audio to start from a gesture.
   A.wake = function () { if (ctx && ctx.state !== 'running' && !pauseAt) ctx.resume(); };
   A.usingFallback = () => fallback;
+  A.isRunning = () => !!ctx && ctx.state === 'running';
+  A.state = () => (ctx ? ctx.state : 'tidak ada');
+
+  // Resolves true once the AudioContext is really running (false after `ms`). Firefox, and some devices, start the
+  // audio hardware lazily: resume() can take a few hundred ms (or needs a click/keypress to count as a user gesture),
+  // so the game waits for this before it starts its clock instead of assuming audio is instantly there.
+  A.ready = function (ms) {
+    return new Promise((resolve) => {
+      if (!ctx) return resolve(false);
+      if (ctx.state === 'running') return resolve(true);
+      let done = false, timer = 0;
+      const finish = (v) => {
+        if (done) return;
+        done = true;
+        ctx.removeEventListener('statechange', onChange);
+        clearTimeout(timer);
+        resolve(v);
+      };
+      const onChange = () => { if (ctx.state === 'running') finish(true); };
+      ctx.addEventListener('statechange', onChange);
+      timer = setTimeout(() => finish(ctx.state === 'running'), ms);
+      try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ }
+    });
+  };
 
   function applyBus(ch, immediate) {
     if (!bus[ch]) return;
@@ -259,6 +283,9 @@
     A.init();
     A.stop();
     begin(bpm, level);
+    // The launcher already waited for the audio to start (A.ready). If it still is not running, do not freeze the
+    // game for a moment: run on the system clock from the first frame (silent), and say why in a notice.
+    if (ctx && ctx.state !== 'running') fallback = true;
     if (ctx) {
       startFile(bpm);
       timer = setInterval(pump, 25);
@@ -284,7 +311,7 @@
   // Seconds since the first beat, shifted by output latency so it matches what the player HEARS.
   A.time = function () {
     const wall = ((pauseAt || performance.now()) - perfStart - pausedMs) / 1000;   // seconds since start, pauses excluded
-    if (!fallback && !pauseAt && wall > 0.6 && ctx.currentTime - ctxStart < 0.1) fallback = true;   // audio clock stalled
+    if (!fallback && !pauseAt && wall > 2 && ctx.currentTime - ctxStart < 0.1) fallback = true;   // audio clock stalled
     if (fallback) return wall - 0.2;
     return ctx.currentTime - startAt - latency();
   };

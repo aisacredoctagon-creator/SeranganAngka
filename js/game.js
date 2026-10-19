@@ -202,7 +202,7 @@
     raf = requestAnimationFrame(frame);
     if (!S || S.paused) return;
     const t = songTime();
-    if (A.usingFallback() && !S.noticed) { S.noticed = true; notice('Suara tidak aktif di browser ini. Game tetap jalan tanpa musik. Klik/tekan tombol sekali untuk mencoba menyalakan suara.'); }
+    if (A.usingFallback() && !S.noticed) { S.noticed = true; notice(`Suara belum aktif (status audio: ${A.state()}). Game tetap jalan tanpa musik. Cek izin suara situs di browser (autoplay), lalu mulai ulang level.`); }
     processMisses(t);
     spawnDue(t);
     render(t);
