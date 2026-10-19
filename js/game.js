@@ -32,7 +32,7 @@
     el = {
       field: $('field'), notes: $('notes'), pads: $('pads'), guides: $('lane-guides'),
       judge: $('judge'), fx: $('fx'), lives: $('lives'), dots: $('combo-dots'),
-      mult: $('combo-mult'), label: $('combo-label'), score: $('score'),
+      label: $('combo-label'), score: $('score'), bpm: $('bpm-text'),
       tier: $('tier-text'), tierBar: $('tier-bar'), toast: $('toast'), hitline: $('hitline'),
     };
     window.addEventListener('keydown', onKeyDown);
@@ -283,7 +283,7 @@
   }
 
   // ---- judging ---------------------------------------------------------------------
-  const LABELS = { perfect: 'Sempurna!', good: 'Bagus!', early: 'Terlalu cepat', late: 'Agak lambat', wrong: 'Salah!', pass: 'Telat!' };
+  const LABELS = { perfect: 'PERFECT!', good: 'GOOD!', early: 'CEPAT!', late: 'LAMBAT!', wrong: 'MISS!', pass: 'MISS!' };
   const TONES = { perfect: 'perfect', good: 'good', early: 'off', late: 'off', wrong: 'bad', pass: 'bad' };
 
   function judge(n, kind, picked) {
@@ -470,8 +470,7 @@
   function updateHud() {
     el.score.textContent = S.score.toLocaleString('en-US');
     const m = mult(S.streak);
-    el.mult.textContent = m;
-    el.label.textContent = S.streak > 1 ? `Combo · ${S.streak}` : 'Combo';
+    el.label.textContent = `COMBO x${m}`;
     const filled = m >= C.maxMultiplier ? C.comboStep : S.streak % C.comboStep;
     [...el.dots.children].forEach((d, i) => d.classList.toggle('on', i < filled));
     [...el.lives.children].forEach((h, i) => {
@@ -482,7 +481,8 @@
     const ti = tierIndex(S.correct);
     const before = C.tiers.slice(0, ti).reduce((s, t) => s + need(t), 0);
     const inTier = Math.min(need(C.tiers[ti]), S.correct - before);
-    el.tier.textContent = `Tahap ${ti + 1}/${C.tiers.length} · ${inTier}/${need(C.tiers[ti])} benar`;
+    el.tier.textContent = `Tahap ${ti + 1}/${C.tiers.length}`;
+    el.bpm.textContent = `${S.bpm} BPM`;
     el.tierBar.style.width = `${(inTier / need(C.tiers[ti])) * 100}%`;
   }
 

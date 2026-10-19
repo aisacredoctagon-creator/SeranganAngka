@@ -67,6 +67,7 @@
 
     // Decimals: CONFIG.levels[n].decTiers[t] = { ints, places, types } - see config.js.
     // Whole parts of 1 digit may be 0 (0.32 + 0.67). Operands never end in a zero (3.40 would read as 3.4).
+    // Choices are spaced one unit of the second-last digit apart, so all end in the same digit (distractorStep is not used here).
     dec(L, t, lanes, step) {
       const S = L.decTiers[t];
       const kind = weighted(S.types);
@@ -100,7 +101,7 @@
           text = `${show(A)} + ${show(B)}`;
         }
         const fmt = (x) => showU(x, maxP);
-        const vals = cluster(ans, lanes, step * pow(maxP - 1), 0);        // a "step" is always 0.1
+        const vals = cluster(ans, lanes, 10, 1);                          // spacing = 10 units of the last place: same last digit (5.37, 5.47, 5.57)
         return { text, options: vals.map(fmt), correct: vals.indexOf(ans), answer: fmt(ans) };
       }
 
@@ -122,22 +123,22 @@
       let P = scale;
       while (P > 1 && ans % 10 === 0) { ans /= 10; P--; }                 // 5.00 -> 5.0
       scale = P;
-      const unit = pow(P - 1);                                            // 0.1 in units of 10^-P
       const mkOpt = (n, sc) => ({ n, sc, v: n / pow(sc), key: Math.round(n * pow(5 - sc)) });
       const answer = mkOpt(ans, P);
-      const opts = cluster(ans, lanes, step * unit, Math.min(unit, ans)).map((n) => (n === ans ? answer : mkOpt(n, P)));
-      // one wrong choice is the classic slip: decimal point in the wrong place (x10 or /10)
-      const slips = [mkOpt(ans * 10, P), P < 4 ? mkOpt(ans, P + 1) : null].filter(Boolean);
-      const slip = pick(slips);
-      const swap = opts.map((o, i) => (o === answer ? -1 : i)).filter((i) => i >= 0);
-      if (!opts.some((o) => o.key === slip.key)) opts[pick(swap)] = slip;
-      if (!opts.includes(answer)) throw new Error('answer outside the choices: ' + text);
-      opts.sort((x, y) => x.v - y.v);
+      const opts = cluster(ans, lanes, 10, Math.min(1, ans)).map((n) => (n === ans ? answer : mkOpt(n, P)));
       const fmtO = (o) => {                                               // never fewer than P places, never trailing extras
         let { n, sc } = o;
         while (sc > P && n % 10 === 0) { n /= 10; sc--; }
         return (n / pow(sc)).toFixed(sc);
       };
+      // one wrong choice is the classic slip: decimal point in the wrong place (x10 or /10) - same digits, so it ends the same too
+      const slips = [P > 0 ? mkOpt(ans, P - 1) : null, P < 4 ? mkOpt(ans, P + 1) : null].filter(Boolean)
+        .filter((o) => fmtO(o).slice(-1) === fmtO(answer).slice(-1));    // a slip that would end differently (87.0 vs 8.7) would give the answer away
+      const slip = slips.length ? pick(slips) : null;
+      const swap = opts.map((o, i) => (o === answer ? -1 : i)).filter((i) => i >= 0);
+      if (slip && !opts.some((o) => o.key === slip.key)) opts[pick(swap)] = slip;
+      if (!opts.includes(answer)) throw new Error('answer outside the choices: ' + text);
+      opts.sort((x, y) => x.v - y.v);
       return { text, options: opts.map(fmtO), correct: opts.indexOf(answer), answer: fmtO(answer) };
     },
 

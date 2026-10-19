@@ -184,6 +184,23 @@
     line(badTotal === 0, `<b>L${li + 1} ${L.name}</b> (${L.type}): ${total} problems, ${badTotal} with a wrong, missing or duplicate answer${badTotal ? '<br>' + firstBad.slice(0, 4).join('<br>') : ''} - kinds: ${typeList}`);
   });
 
+  // ============================================================ Pecahan + Desimal: 3 choices that all END THE SAME WAY
+  {
+    const bad = [];
+    let n = 0;
+    C.levels.forEach((L, li) => {
+      if (L.type !== 'frac' && L.type !== 'dec') return;
+      if (L.lanes !== 3) bad.push(`${L.name}: lanes is ${L.lanes}, must be 3`);
+      for (let t = 0; t < 5; t++) for (let i = 0; i < 800; i++) {
+        const p = NA.makeProblem(li, t, L.lanes);
+        n++;
+        const ends = new Set(p.options.map((o) => (L.type === 'dec' ? o.slice(-1) : (/\/(\d+)\}/.exec(o) || [0, '1'])[1])));
+        if (p.options.length !== 3 || ends.size !== 1) bad.push(`${L.name}: ${p.text} → [${p.options.join(' | ')}]`);
+      }
+    });
+    line(bad.length === 0, `Pecahan + Desimal: ${n} problems, always 3 choices; decimals share the last digit, fractions share the denominator${bad.length ? '<br>' + bad.slice(0, 4).join('<br>') : ''}`);
+  }
+
   // ============================================================ the fraction tiers really differ
   {
     const L = C.levels.findIndex((l) => l.type === 'frac');

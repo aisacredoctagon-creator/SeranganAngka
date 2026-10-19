@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <!-- fluid layout, no pinch-zoom while playing, draw under the notch / home bar (we pad with env(safe-area-inset-*)) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#F5F2FF">
+  <meta name="theme-color" content="#F3F7FB">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,39 +13,32 @@
   <meta name="description" content="Game ritme matematika: pilih jawaban yang benar tepat di garis, seirama dengan musik.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <!-- fonts from the Figma design: Fredoka (menu), Rubik (numbers + gameplay), Outfit (pause), Plus Jakarta Sans (small text) -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Rubik:wght@500;600;700;800;900&family=Outfit:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="app">
 
-  <div class="bg-symbols" aria-hidden="true">
-    <span style="left:4%;top:14%;--c:var(--lane1)">+</span>
-    <span style="left:88%;top:22%;--c:var(--lane4)">×</span>
-    <span style="left:8%;top:62%;--c:var(--lane2)">÷</span>
-    <span style="left:90%;top:70%;--c:var(--lane3)">−</span>
-    <span style="left:22%;top:86%;--c:var(--lane5)">×</span>
-    <span style="left:76%;top:88%;--c:var(--lane1)">÷</span>
-  </div>
-
   <!-- ============ MENU ============ -->
   <section id="screen-menu" class="screen active" aria-label="Menu">
     <div class="wrap menu">
       <header class="m-topbar">
-        <div class="hs">
-          <span class="icon-box" data-icon="chart" data-size="22"></span>
-          <span class="hs-label">Skor Tertinggi</span>
-          <b id="hs-value" class="hs-value">0</b>
+        <div class="hs-pill" title="Skor tertinggi">
+          <span class="hs-ico" data-icon="trophy" data-size="18"></span>
+          <b id="hs-value">0</b>
         </div>
-        <div class="snd-wrap">
-          <button id="btn-sound" type="button" class="round-btn" aria-label="Pengaturan suara" aria-expanded="false" aria-controls="snd-pop"><span data-icon="volume"></span></button>
-          <div id="snd-pop" class="snd-pop" hidden><div class="snd-title">Suara</div><div class="snd-panel" data-sound-panel></div></div>
-        </div>
-        <div id="motion" class="motion" role="group" aria-label="Mode gerak soal">
-          <span class="motion-label">Gerakan</span>
-          <div class="segmented small">
-            <button type="button" class="seg" data-mode="smooth" aria-pressed="true"><b>Halus</b></button>
-            <button type="button" class="seg" data-mode="step" aria-pressed="false"><b>Per Langkah</b></button>
+        <div class="m-tools">
+          <div id="motion" class="motion" role="group" aria-label="Mode gerak soal">
+            <span class="motion-label">Gerakan</span>
+            <div class="mode-switch">
+              <button type="button" class="mode-btn" data-mode="smooth" aria-pressed="true">Halus</button>
+              <button type="button" class="mode-btn" data-mode="step" aria-pressed="false">Per Langkah</button>
+            </div>
+          </div>
+          <div class="snd-wrap">
+            <button id="btn-sound" type="button" class="icon-btn" aria-label="Pengaturan suara" aria-expanded="false" aria-controls="snd-pop"><span data-icon="volume-2" data-size="22"></span></button>
+            <div id="snd-pop" class="snd-pop" hidden><div class="snd-title">Suara</div><div class="snd-panel" data-sound-panel></div></div>
           </div>
         </div>
       </header>
@@ -53,22 +46,21 @@
       <div class="m-body">
         <div class="m-hero">
           <h1>Serangan <span>Angka</span></h1>
-          <p>Pilih jawaban benar yang seirama</p>
+          <p>Uji ketepatanmu dalam menjawab soal angka!</p>
         </div>
 
-        <div class="m-levels">
-          <div class="section-label">Pilih Level</div>
+        <section class="m-levels">
+          <h2 class="section-label"><i class="dot"></i>Pilih Level</h2>
           <div id="levels" class="levels" role="group" aria-label="Pilih level"></div>
-        </div>
-
-        <div class="m-diff">
-          <div class="section-label center">Tingkat Kesusahan</div>
-          <div id="diffs" class="segmented" role="group" aria-label="Tingkat kesusahan"></div>
-        </div>
+        </section>
 
         <div class="m-actions">
-          <button id="btn-play" type="button" class="big-btn primary"><span data-icon="play" data-size="24"></span>Main</button>
-          <p id="controls-hint" class="m-controls">Control : D F J K</p>
+          <div class="m-diff">
+            <div class="diff-label" id="diff-label">Tingkat Kesusahan</div>
+            <div id="diffs" class="diff-switch" role="group" aria-labelledby="diff-label"></div>
+          </div>
+          <button id="btn-play" type="button" class="main-btn">Main</button>
+          <p id="controls-hint" class="m-controls"><span>Control :</span><span id="key-chips" class="key-chips"></span></p>
         </div>
       </div>
     </div>
@@ -79,28 +71,26 @@
     <div class="wrap game">
       <div class="hud">
         <div class="hud-combo">
-          <div id="combo-label" class="hud-label">Combo</div>
-          <div class="hud-row">
-            <div id="combo-dots" class="dots" aria-hidden="true"></div>
-            <div class="mult">×<b id="combo-mult">1</b></div>
-          </div>
+          <div id="combo-label" class="hud-label">COMBO x1</div>
+          <div id="combo-dots" class="dots" aria-hidden="true"></div>
         </div>
         <div class="hud-score">
-          <div class="hud-label">Skor</div>
-          <div id="score" class="score">0</div>
+          <div id="score" class="score" aria-label="Skor">0</div>
         </div>
         <div class="hud-right">
           <div id="lives" class="lives" aria-label="Nyawa"></div>
-          <button id="btn-pause" type="button" class="pill-btn">Jeda</button>
+          <button id="btn-pause" type="button" class="pause-btn" aria-label="Jeda"><span class="pause-ico" data-icon="pause" data-size="14"></span><span class="pause-text">Jeda</span></button>
         </div>
       </div>
 
       <div id="field" class="field">
         <div id="lane-guides" class="lane-guides" aria-hidden="true"></div>
-        <div class="center-strip" aria-hidden="true"></div>
-        <div id="hitline" class="hitline" aria-hidden="true"></div>
+        <div id="hitline" class="hitline" aria-hidden="true"><i></i><i></i></div>
         <div id="notes" class="notes"></div>
-        <div class="tier-chip"><span id="tier-text">Tahap 1/6</span><span class="tier-track"><i id="tier-bar"></i></span></div>
+        <div class="arena-head">
+          <div class="progress" aria-hidden="true"><i id="tier-bar"></i></div>
+          <div class="arena-meta"><span id="tier-text">Tahap 1/6</span><span id="bpm-text">60 BPM</span></div>
+        </div>
         <div id="toast" class="toast" aria-live="polite"></div>
         <div id="judge" class="judge" aria-live="polite"></div>
         <div id="fx" class="fx" aria-hidden="true"></div>
@@ -110,54 +100,60 @@
     </div>
   </section>
 
-  <!-- ============ RESULTS ============ -->
+  <!-- ============ RESULTS (Selesai / Nyawa Habis) ============ -->
   <section id="screen-results" class="screen" aria-label="Hasil">
     <div class="wrap results">
-      <div class="r-head">
-        <div id="res-stars" class="stars"></div>
-        <h2 id="res-title">Selesai</h2>
-        <p id="res-sub">Level 1 - Penjumlahan - 60 BPM</p>
-      </div>
+      <div class="r-scroll">
+        <div class="r-head">
+          <div id="res-stars" class="stars"></div>
+          <h2 id="res-title">Nyawa Habis</h2>
+          <p id="res-sub" class="info-pill">Level 1 - Penjumlahan • 60 BPM • Tahap 1</p>
+        </div>
 
-      <div class="r-body">
-        <div class="r-card r-left">
-          <div class="r-stats">
-            <div><div class="r-label">Skor</div><div id="res-score" class="r-num">0</div></div>
-            <div><div class="r-label">Akurasi</div><div id="res-acc" class="r-num">0%</div></div>
-            <div><div class="r-label">Combo Terbesar</div><div class="r-num">×<span id="res-combo">0</span></div></div>
+        <div class="r-grid">
+          <div class="r-card r-left">
+            <div class="r-stats">
+              <div class="r-stat"><div class="r-label">Skor</div><div id="res-score" class="r-num">0</div></div>
+              <div class="r-stat"><div class="r-label">Akurasi</div><div id="res-acc" class="r-num">0%</div></div>
+              <div class="r-stat"><div class="r-label">Combo Max</div><div id="res-combo" class="r-num">×0</div></div>
+            </div>
+            <div class="timing-head"><span>Timing</span><span class="timing-note">Rasio Ketukan</span></div>
+            <div class="bar-row"><div class="bar-top"><span>Sempurna</span><b id="res-perfect">0</b></div><div class="bar"><i id="bar-perfect" class="perfect"></i></div></div>
+            <div class="bar-row"><div class="bar-top"><span>Bagus</span><b id="res-good">0</b></div><div class="bar"><i id="bar-good" class="good"></i></div></div>
+            <div class="bar-row"><div class="bar-top"><span>Cepat / Lambat</span><b id="res-off">0</b></div><div class="bar"><i id="bar-off" class="off"></i></div></div>
+            <div class="bar-row"><div class="bar-top"><span>Miss</span><b id="res-miss">0</b></div><div class="bar"><i id="bar-miss" class="miss"></i></div></div>
           </div>
-          <div class="r-label strong">Timing</div>
-          <div class="bar-row"><div class="bar-top"><span>Sempurna</span><b id="res-perfect">0</b></div><div class="bar"><i id="bar-perfect" class="perfect"></i></div></div>
-          <div class="bar-row"><div class="bar-top"><span>Bagus</span><b id="res-good">0</b></div><div class="bar"><i id="bar-good" class="good"></i></div></div>
-          <div class="bar-row"><div class="bar-top"><span>Cepat / Lambat</span><b id="res-off">0</b></div><div class="bar"><i id="bar-off" class="off"></i></div></div>
-          <div class="bar-row"><div class="bar-top"><span>Miss</span><b id="res-miss">0</b></div><div class="bar"><i id="bar-miss" class="miss"></i></div></div>
+
+          <div class="r-card r-right">
+            <div class="rv-head"><h3>Review Salah</h3><span id="res-missbadge" class="rv-badge">0 Soal Terlewat</span></div>
+            <ul id="res-review" class="review"></ul>
+          </div>
         </div>
 
-        <div class="r-card r-right">
-          <h3>Review Salah</h3>
-          <ul id="res-review" class="review"></ul>
+        <div class="r-actions">
+          <button id="res-again" type="button" class="act-btn outline">Main Lagi</button>
+          <button id="res-next" type="button" class="act-btn primary"><span data-icon="play" data-size="20"></span>Lanjut Level</button>
+          <button id="res-menu" type="button" class="act-btn outline">Balik Menu</button>
         </div>
-      </div>
-
-      <div class="r-actions">
-        <button id="res-again" type="button" class="big-btn primary"><span data-icon="play" data-size="22"></span>Main Lagi</button>
-        <button id="res-next" type="button" class="big-btn">Lanjut Level</button>
-        <button id="res-menu" type="button" class="big-btn">Balik Menu</button>
       </div>
     </div>
   </section>
 
   <!-- ============ OVERLAYS ============ -->
-  <div id="overlay-pause" class="overlay" role="dialog" aria-modal="true" aria-label="Jeda">
+  <div id="overlay-pause" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title">
     <div class="modal">
-      <h2>Jeda</h2>
+      <h2 id="pause-title">Jeda</h2>
+      <p class="modal-sub">Permainan Dihentikan Sementara</p>
       <div class="modal-actions">
-        <button id="pause-resume" type="button" class="big-btn primary"><span data-icon="play" data-size="22"></span>Lanjut</button>
-        <button id="pause-restart" type="button" class="big-btn">Ulangi</button>
-        <button id="pause-menu" type="button" class="big-btn">Balik Menu</button>
+        <button id="pause-resume" type="button" class="m-btn primary"><span data-icon="play" data-size="20"></span>Lanjut</button>
+        <button id="pause-restart" type="button" class="m-btn outline">Ulangi</button>
+        <button id="pause-menu" type="button" class="m-btn outline">Balik Menu</button>
       </div>
       <div class="snd-panel" data-sound-panel></div>
-      <p class="modal-hint">Tekan Esc atau P untuk jeda</p>
+      <p class="modal-hint">
+        <span class="hint-kb">Tekan <kbd>Esc</kbd> atau <kbd>P</kbd> untuk jeda</span>
+        <span class="hint-touch">Ketuk Lanjut untuk kembali bermain</span>
+      </p>
     </div>
   </div>
   <div id="countdown" class="overlay clear" aria-hidden="true"><div id="countdown-num" class="countdown-num">3</div></div>

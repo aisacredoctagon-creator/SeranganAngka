@@ -30,10 +30,11 @@ serve.js                server statis kecil untuk pengembangan lokal
 ## Cara main
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
-- Keyboard: 3 jalur `F Spasi J`, 4 jalur `D F J K`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
+- Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
 - **Sempurna** ±100 ms, **Bagus** ±250 ms, **Cepat/Lambat** ±400 ms (benar tapi kurang pas: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = Miss: combo putus, nyawa −1.
+- Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
-- Level N+1 terbuka setelah skor 100+ di level N.
+- Semua level terbuka sejak awal (tidak ada kunci level); "Lanjut Level" di layar hasil selalu tampil dan kembali ke level 1 setelah level terakhir.
 
 ## Semua pengaturan ada di `js/config.js`
 | Topik | Kunci |
@@ -47,9 +48,10 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Kedekatan pilihan jawaban | `distractorStep` (per tahap; kecil = lebih dekat) |
 | Mode gerak | `movementMode: 'smooth' \| 'step'`, `step.moveFraction` |
 | Jumlah jalur, BPM, kecepatan per level | `levels[].{lanes,bpmStage,noteEveryBeats}`, `difficulties[].bpm` |
-| Nyawa, combo, bintang, buka-kunci | `lives`, `comboStep`, `maxMultiplier`, `stars`, `unlockScore`, `unlockAll` |
+| Nyawa, combo, bintang | `lives`, `comboStep`, `maxMultiplier`, `stars` |
+| Tombol keyboard & warna jalur | `keys`, `laneColors` (warna jalur merujuk variabel CSS `--c-lane-*`) |
 
-Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`, `?unlock=all`. Mode gerak juga bisa diganti di menu utama ("Gerakan: Halus / Per Langkah") dan pilihan itu diingat.
+Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`. Mode gerak juga bisa diganti di menu utama ("Gerakan: Halus / Per Langkah") dan pilihan itu diingat.
 
 ## Mobile & layar lain
 - Layout fluid (rem, `clamp()`, flex/grid, `dvh`) tanpa ukuran piksel tetap: satu CSS untuk ponsel 360 px sampai desktop 1920 px. Portrait diutamakan: ladang jatuh mengisi sisa tinggi layar, lane jawaban di bawah (zona jempol). Landscape ponsel memakai aturan `max-height: 520px` yang lebih rapat. Padding `env(safe-area-inset-*)` menghormati notch dan bar navigasi.
@@ -93,3 +95,6 @@ Connector ElevenLabs yang terpasang di sesi pembuatan hanya mendukung suara/ucap
 2. Minta backing instrumental **tanpa melodi/vokal**, loop 8 birama 4/4, kunci dan chord sesuai `js/music.js`, untuk tiap level dan BPM yang dipakai (21 file: L1–L3 di 60/80/100 BPM, L4–L5 di 70/90/110, L6–L7 di 80/100/120).
 3. Simpan di `assets/audio/` dan daftarkan di `tracks[n].files` (lihat `assets/audio/README.md`). Pastikan tempo file tepat; musik hasil AI sering sedikit meleset, jadi cek dan, bila perlu, stretch ke BPM persis dan potong tepat di birama.
 4. Jalankan lewat `node serve.js` (bukan `file://`). Bila file gagal dimuat, game otomatis kembali ke backing sintesis.
+
+## Tampilan
+UI mengikuti desain Figma "Alat Peraga Digital" (flat modern, aksen coral). Semua token (warna, font, radius, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Fredoka, Rubik, Outfit, Plus Jakarta Sans (Google Fonts).

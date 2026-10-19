@@ -8,17 +8,18 @@
 
   // ---- URL options (handy for testing / teachers) ---------------------------
   const q = new URLSearchParams(location.search);
-  if (q.get('unlock') === 'all') C.unlockAll = true;
   if (['3', '4', '5'].includes(q.get('lanes'))) C.laneOverride = +q.get('lanes');   // force lane count in every level
 
-  // ---- Lucide-style icons ---------------------------------------------------
+  // ---- Lucide icons (https://lucide.dev, ISC licence) - one outline style; heart/star/play/pause are filled by CSS ----
+  const SLASH = '<path class="slash" d="m2 2 20 20"/>';                    // drawn over an icon when its channel is muted
   const ICONS = {
-    'volume': '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path class="wave" d="M16 9a5 5 0 0 1 0 6"/><path class="wave" d="M19.364 18.364a9 9 0 0 0 0-12.728"/><path class="slash" d="m2 2 20 20"/>',
-    'music': '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path class="slash" d="m2 2 20 20"/>',
-    'melody': '<circle cx="8" cy="18" r="4"/><path d="M12 18V2l7 4"/><path class="slash" d="m2 2 20 20"/>',
-    'play': '<polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>',
-    'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-    'chart': '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>',
+    'volume-2': '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path class="wave" d="M16 9a5 5 0 0 1 0 6"/><path class="wave" d="M19.364 18.364a9 9 0 0 0 0-12.728"/>' + SLASH,
+    'music': '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' + SLASH,
+    'audio-lines': '<path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/>' + SLASH,
+    'play': '<polygon points="6 3 20 12 6 21 6 3"/>',
+    'pause': '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>',
+    'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
   };
@@ -34,8 +35,8 @@
   // Sound settings per channel (older saves only had on/off for sfx + music).
   const CHANNELS = [
     { id: 'music',  label: 'Musik',  icon: 'music' },
-    { id: 'melody', label: 'Melodi', icon: 'melody' },
-    { id: 'sfx',    label: 'Efek',   icon: 'volume' },
+    { id: 'melody', label: 'Melodi', icon: 'audio-lines' },
+    { id: 'sfx',    label: 'Efek',   icon: 'volume-2' },
   ];
   save.vol = save.vol || {};
   save.mute = save.mute || {};
@@ -49,9 +50,8 @@
   delete save.music;
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } };
 
-  const unlocked = (i) => i === 0 || C.unlockAll || (save.best[i - 1] || 0) >= C.unlockScore;
   const highScore = () => Math.max(0, ...Object.values(save.best));
-  if (!unlocked(save.level)) save.level = 0;
+  if (!(save.level >= 0 && save.level < C.levels.length)) save.level = 0;
   save.diff = Math.min(save.diff, C.difficulties.length - 1);
 
   // Movement mode: URL > remembered menu choice > config default ('smooth')
@@ -81,55 +81,41 @@
 
   function renderHint() {
     const keys = C.keys[NA.laneCount(save.level)];
-    $('controls-hint').textContent = `Control : ${keys.map((k) => k.label).join(' ')}`;
+    $('key-chips').innerHTML = keys.map((k) => `<kbd class="key-chip">${k.label}</kbd>`).join('');
   }
 
   function renderMotion() {
-    $$('#motion .seg').forEach((b) => {
+    $$('#motion .mode-btn').forEach((b) => {
       const on = b.dataset.mode === C.movementMode;
       b.classList.toggle('selected', on);
       b.setAttribute('aria-pressed', String(on));
     });
   }
-  $$('#motion .seg').forEach((b) => b.addEventListener('click', () => {
+  $$('#motion .mode-btn').forEach((b) => b.addEventListener('click', () => {
     C.movementMode = b.dataset.mode;
     save.movement = b.dataset.mode;
     persist();
     renderMotion();
   }));
 
+  // Level cards: label + status dot + name + operator tile (desktop grid), a row with a chevron (phone list).
   function renderLevels() {
     const box = $('levels');
-    const keep = box.scrollLeft;
     box.innerHTML = '';
     C.levels.forEach((L, i) => {
-      const locked = !unlocked(i);
+      const on = i === save.level;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'level' + (i === save.level ? ' selected' : '') + (locked ? ' locked' : '');
-      b.setAttribute('aria-pressed', String(i === save.level));
-      if (locked) b.setAttribute('aria-disabled', 'true');
+      b.className = 'level' + (on ? ' selected' : '');
+      b.setAttribute('aria-pressed', String(on));
       b.innerHTML =
-        `<span class="lv-head"><span class="lv-num">Level ${i + 1}</span><span class="lv-name">${L.name}</span></span>` +
-        (locked
-          ? `<span class="lv-lock">${NA.icon('lock', 20)}<span>${C.unlockScore}+ di Level ${i}</span></span>`
-          : `<span class="lv-sample">${NA.fmt.html(L.sample)}</span>`);
-      b.addEventListener('click', () => {
-        if (locked) {
-          b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
-          return;
-        }
-        save.level = i; persist(); renderLevels(); renderHint();
-      });
+        `<span class="lv-top"><span class="lv-num">Level ${i + 1}</span><i class="lv-dot"></i></span>` +
+        `<span class="lv-name">${L.name}</span>` +
+        `<span class="lv-well"><span class="lv-sym">${NA.fmt.html(L.glyph || L.sample)}</span></span>` +
+        `<span class="lv-go"><span class="go-chevron">${NA.icon('chevron-right', 16)}</span><span class="go-play">${NA.icon('play', 14)}</span></span>`;
+      b.addEventListener('click', () => { save.level = i; persist(); renderLevels(); renderHint(); });
       box.appendChild(b);
     });
-    box.scrollLeft = keep;
-    const sel = box.children[save.level];
-    if (sel) {
-      const r = sel.offsetLeft - box.offsetLeft;
-      if (r < box.scrollLeft) box.scrollLeft = r;
-      else if (r + sel.offsetWidth > box.scrollLeft + box.clientWidth) box.scrollLeft = r + sel.offsetWidth - box.clientWidth;
-    }
   }
 
   function renderDiffs() {
@@ -138,9 +124,9 @@
     C.difficulties.forEach((d, i) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'seg' + (i === save.diff ? ' selected' : '');
+      b.className = 'diff-btn' + (i === save.diff ? ' selected' : '');
       b.setAttribute('aria-pressed', String(i === save.diff));
-      b.innerHTML = `<b>${d.label}</b><small>${d.bpm[0]}+ BPM</small>`;
+      b.textContent = d.label;
       b.addEventListener('click', () => { save.diff = i; persist(); renderDiffs(); });
       box.appendChild(b);
     });
@@ -152,7 +138,7 @@
     $$('[data-sound-panel]').forEach((panel) => {
       panel.innerHTML = CHANNELS.map((c) => `
         <div class="snd-row" data-ch="${c.id}">
-          <button type="button" class="round-btn snd-mute" aria-label="Bisukan ${c.label}">${NA.icon(c.icon, 24)}</button>
+          <button type="button" class="snd-mute" aria-label="Bisukan ${c.label}">${NA.icon(c.icon, 20)}</button>
           <span class="snd-label">${c.label}</span>
           <input type="range" class="snd-range" min="0" max="100" step="5" aria-label="Volume ${c.label}">
           <output class="snd-val"></output>
@@ -202,11 +188,6 @@
   document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) setPop(false); });
   window.addEventListener('keydown', (e) => { if (e.code === 'Escape') setPop(false); });
 
-  // Wheel scrolls the level strip sideways; arrow keys change level.
-  $('levels').addEventListener('wheel', (e) => {
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { $('levels').scrollLeft += e.deltaY; e.preventDefault(); }
-  }, { passive: false });
-
   // Optional audio files (see js/music.js) are loaded first; with the built-in synth this returns at once.
   let launching = false;
   async function launch(level, diff) {
@@ -234,8 +215,7 @@
     if (e.code === 'Enter') { e.preventDefault(); startGame(); }
     if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
       const dir = e.code === 'ArrowRight' ? 1 : -1;
-      let i = save.level + dir;
-      while (i >= 0 && i < C.levels.length && !unlocked(i)) i += dir;
+      const i = save.level + dir;
       if (i >= 0 && i < C.levels.length) { save.level = i; persist(); renderLevels(); renderHint(); }
     }
   });
@@ -269,30 +249,36 @@
 
   function renderResults(r) {
     const L = C.levels[r.levelIdx];
-    $('res-stars').innerHTML = [1, 2, 3].map((n) => `<span class="star${n <= r.stars ? ' on' : ''}" style="--i:${n}">${NA.icon('star', 42)}</span>`).join('');
+    $('res-stars').innerHTML = [1, 2, 3].map((n) => `<span class="star${n <= r.stars ? ' on' : ''}" style="--i:${n}">${NA.icon('star', 40)}</span>`).join('');
     $('res-title').textContent = r.gameOver ? 'Nyawa Habis' : 'Selesai';
-    $('res-sub').textContent = `Level ${r.levelIdx + 1} - ${L.name} - ${r.bpm} BPM - Tahap ${r.tier}`;
+    $('res-sub').textContent = `Level ${r.levelIdx + 1} - ${L.name} • ${r.bpm} BPM • Tahap ${r.tier}`;
     $('res-score').textContent = r.score.toLocaleString('en-US');
     $('res-acc').textContent = `${Math.round(r.accuracy * 100)}%`;
-    $('res-combo').textContent = r.maxStreak;
+    $('res-combo').textContent = `×${r.maxStreak}`;
     const total = Math.max(1, r.perfect + r.good + r.offBeat + r.miss);
     [['perfect', r.perfect], ['good', r.good], ['off', r.offBeat], ['miss', r.miss]].forEach(([k, v]) => {
       $(`res-${k}`).textContent = v;
       $(`bar-${k}`).style.width = `${Math.max(v ? 6 : 0, (v / total) * 100)}%`;
     });
-    const list = $('res-review');
-    list.innerHTML = r.review.length
-      ? r.review.map((x) => `<li><span class="rv-q">${NA.fmt.html(x.text)}</span><span class="rv-why">${NA.fmt.html(x.reason)}</span></li>`).join('')
+    $('res-missbadge').textContent = `${r.miss} Soal Terlewat`;
+    $('res-missbadge').hidden = r.miss === 0;
+    // "Kamu Menjawab {x}" -> label + answer chip; "Telat" -> a chip on its own
+    $('res-review').innerHTML = r.review.length
+      ? r.review.map((x) => {
+        const m = /^Kamu Menjawab (.*)$/.exec(x.reason);
+        const why = m
+          ? `<span class="rv-label">Kamu Menjawab</span><span class="rv-chip">${NA.fmt.html(m[1])}</span>`
+          : `<span class="rv-chip late">${NA.fmt.html(x.reason)}</span>`;
+        return `<li><span class="rv-q">${NA.fmt.html(x.text)}</span><span class="rv-why">${why}</span></li>`;
+      }).join('')
       : '<li class="rv-empty">Tidak ada yang salah. Keren!</li>';
-    const hasNext = r.levelIdx + 1 < C.levels.length && unlocked(r.levelIdx + 1);
-    $('res-next').disabled = !hasNext;
-    $('res-next').title = hasNext ? '' : (r.levelIdx + 1 < C.levels.length ? `Butuh ${C.unlockScore}+ di Level ${r.levelIdx + 1}` : 'Ini level terakhir');
   }
 
   $('res-again').addEventListener('click', () => launch(last.levelIdx, last.diffIdx));
+  // "Lanjut Level" is always available (all levels are open); after the last level it wraps to level 1.
   $('res-next').addEventListener('click', () => {
-    if (!last || last.levelIdx + 1 >= C.levels.length || !unlocked(last.levelIdx + 1)) return;
-    save.level = last.levelIdx + 1; persist();
+    if (!last) return;
+    save.level = (last.levelIdx + 1) % C.levels.length; persist();
     launch(save.level, last.diffIdx);
   });
   $('res-menu').addEventListener('click', () => { save.level = last.levelIdx; persist(); show('menu'); });

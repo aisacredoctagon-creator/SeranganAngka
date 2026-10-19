@@ -16,6 +16,7 @@
  *   mixedToImproper improperToMixed
  *   toDecimal toPercent
  *
+ * Levels with sameEnding (default on): every choice has the SAME denominator as the answer, so it cannot be guessed from the bottom number.
  * DISTRACTORS are common mistakes first (adding numerators AND denominators, forgetting to simplify,
  * inverting the wrong fraction, ...), then near neighbours. No two options ever have the same value
  * (except for "simplify", where only ONE option is in lowest terms), so exactly one answer is right.
@@ -63,7 +64,7 @@
   const tf = (n, d) => (d === 1 ? String(n) : `{${n}/${d}}`);                     // fraction token (whole number if d = 1)
 
   // option objects: tok = what is shown, val = number (for sorting), key = identity of its VALUE
-  const fo = (n, d) => ({ tok: tf(n, d), val: n / d, key: rk(n, d) });
+  const fo = (n, d) => ({ tok: tf(n, d), val: n / d, key: rk(n, d), den: d });
   const mo = (w, n, d) => ({ tok: n === 0 ? String(w) : `{${w} ${n}/${d}}`, val: w + n / d, key: rk(w * d + n, d) });
   const trim = (x) => String(+x.toFixed(4));
   const no = (x) => ({ tok: String(x), val: x, key: String(x) });
@@ -75,6 +76,7 @@
     return fo(n > 0 ? n : an + delta, ad);
   };
 
+  let SAME_DEN = false;                                                            // set per call by NA.fractionProblem (CONFIG sameEnding)
   function build(text, ans, cands, filler, lanes, extra) {
     extra = extra || {};
     const keyOf = extra.keyOf || ((o) => o.key);
@@ -83,6 +85,7 @@
     const add = (c) => {
       if (!c || wrong.length >= lanes - 1) return;
       if (!(c.val > 0) || !isFinite(c.val)) return;
+      if (SAME_DEN && ans.den !== undefined && c.den !== ans.den) return;       // every choice ends the same way (same denominator)
       if (extra.minVal && c.val < extra.minVal) return;
       const k = keyOf(c);
       if (seen.has(k)) return;
@@ -277,9 +280,12 @@
   NA.fractionProblem = function (L, tier, lanes) {
     const P = L.fracTiers[tier];
     let last;
-    for (let tries = 0; tries < 20; tries++) {
-      try { return FT[weighted(P.types)](P, lanes); } catch (e) { last = e; }
-    }
+    SAME_DEN = L.sameEnding !== false;
+    try {
+      for (let tries = 0; tries < 20; tries++) {
+        try { return FT[weighted(P.types)](P, lanes); } catch (e) { last = e; }
+      }
+    } finally { SAME_DEN = false; }
     throw last;
   };
   NA._frac = { FT };    // for tests

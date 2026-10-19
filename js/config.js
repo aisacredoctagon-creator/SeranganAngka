@@ -1,7 +1,7 @@
 /*
  * Serangan Angka - game configuration.
  * Every number you are likely to tune during playtesting lives in this one object.
- * URL shortcuts for quick tests:  ?mode=step   ?mode=smooth   ?lanes=4   ?unlock=all
+ * URL shortcuts for quick tests:  ?mode=step   ?mode=smooth   ?lanes=4
  */
 window.NA = window.NA || {};
 
@@ -64,8 +64,7 @@ NA.CONFIG = {
   comboStep: 5,             // perfect/good answers in a row needed to raise the multiplier
   maxMultiplier: 4,
   stars: { two: 0.6, three: 0.85 },   // weighted accuracy needed (finishing = 1 star)
-  unlockScore: 100,         // score needed in level N to unlock level N+1
-  unlockAll: false,         // true = every level open (handy for teachers/testing)
+  // (all levels are open from the start - there is no unlock logic any more)
 
   // ===================== LAYOUT ============================================
   layout: {
@@ -73,24 +72,24 @@ NA.CONFIG = {
   },
 
   // ===================== CONTROLS & LOOK ===================================
+  // Keyboard keys per lane, left to right. 3 lanes = A W D (as in the design); more lanes extend to the right.
   keys: {
     3: [
-      { code: 'KeyF', label: 'F' }, { code: 'Space', label: 'Spasi' }, { code: 'KeyJ', label: 'J' },
+      { code: 'KeyA', label: 'A' }, { code: 'KeyW', label: 'W' }, { code: 'KeyD', label: 'D' },
     ],
     4: [
-      { code: 'KeyD', label: 'D' }, { code: 'KeyF', label: 'F' },
-      { code: 'KeyJ', label: 'J' }, { code: 'KeyK', label: 'K' },
+      { code: 'KeyA', label: 'A' }, { code: 'KeyW', label: 'W' }, { code: 'KeyD', label: 'D' }, { code: 'KeyF', label: 'F' },
     ],
     5: [
-      { code: 'KeyD', label: 'D' }, { code: 'KeyF', label: 'F' },
-      { code: 'Space', label: 'Spasi' },
-      { code: 'KeyJ', label: 'J' }, { code: 'KeyK', label: 'K' },
+      { code: 'KeyA', label: 'A' }, { code: 'KeyW', label: 'W' }, { code: 'KeyD', label: 'D' }, { code: 'KeyF', label: 'F' },
+      { code: 'KeyJ', label: 'J' },
     ],
   },
+  // Accent colour of each answer card. These are CSS variables - the actual colours live in css/style.css (:root).
   laneColors: {
-    3: ['#FF4D8D', '#12B886', '#2D9CFF'],
-    4: ['#FF4D8D', '#FF9F1C', '#12B886', '#2D9CFF'],
-    5: ['#FF4D8D', '#FF9F1C', '#A78BFA', '#12B886', '#2D9CFF'],
+    3: ['var(--c-lane-coral)', 'var(--c-lane-green)', 'var(--c-lane-purple)'],
+    4: ['var(--c-lane-coral)', 'var(--c-lane-green)', 'var(--c-lane-blue)', 'var(--c-lane-purple)'],
+    5: ['var(--c-lane-coral)', 'var(--c-lane-amber)', 'var(--c-lane-green)', 'var(--c-lane-blue)', 'var(--c-lane-purple)'],
   },
 
   // ===================== TEMPO ==============================================
@@ -107,13 +106,17 @@ NA.CONFIG = {
   // noteEveryBeats a problem reaches the line every N beats (4 -> 3 -> 2 in later levels)
   // cap            [max digits big number, max digits small number] for mul/div
   //                (so 3-digit x 3-digit multiplication never happens)
+  // glyph          symbol shown on the level card (menu)
   // tierLabels     optional text shown when a tier starts (default: the digit labels in `tiers`)
   levels: [
-    { name: 'Penjumlahan', sample: '7 + 5',     type: 'add',  lanes: 3, bpmStage: 0, noteEveryBeats: 4 },
-    { name: 'Perkalian',   sample: '3 × 4',     type: 'mul',  lanes: 3, bpmStage: 0, noteEveryBeats: 4, cap: [2, 2] },
-    { name: 'Pengurangan', sample: '8 - 4',     type: 'sub',  lanes: 3, bpmStage: 0, noteEveryBeats: 3 },
-    { name: 'Pembagian',   sample: '4 ÷ 2',     type: 'div',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, cap: [2, 1] },
-    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
+    { name: 'Penjumlahan', sample: '7 + 5',     type: 'add', glyph: '+',  lanes: 3, bpmStage: 0, noteEveryBeats: 4 },
+    { name: 'Perkalian',   sample: '3 × 4',     type: 'mul', glyph: '×',  lanes: 3, bpmStage: 0, noteEveryBeats: 4, cap: [2, 2] },
+    { name: 'Pengurangan', sample: '8 - 4',     type: 'sub', glyph: '−',  lanes: 3, bpmStage: 0, noteEveryBeats: 3 },
+    { name: 'Pembagian',   sample: '4 ÷ 2',     type: 'div', glyph: '÷',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, cap: [2, 1] },
+    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix', glyph: '±',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
+    // Pecahan / Desimal: 3 answer choices like every other level, and ALL choices END THE SAME WAY so the answer cannot be
+    // guessed from the last digit: decimals share the last decimal digit (5.37 / 5.47 / 5.57) and fractions share the
+    // denominator ({3/8} / {5/8} / {7/8}). The generators in problems.js / fractions.js enforce it.
     // Pecahan / Desimal use the SAME fields as every other level (lanes, bpmStage, noteEveryBeats, tiers by correct
     // answers, melody track in music.js). They only ask the four basic operations (+ - x /); the difficulty comes
     // from the numbers. They get 4 beats per problem because "3/4 x 2/3" or "4.5 / 0.5" needs more thinking time
@@ -123,7 +126,7 @@ NA.CONFIG = {
     //   noImproper (same-denominator sums stay <= 1), types = weights of the problem kinds. Available kinds:
     //   addSame subSame addUnlike subUnlike mul div   (fractions.js also has simplify, compare, equiv, mixedToImproper,
     //   improperToMixed, toDecimal, toPercent - not used by default; add them here to switch them on again).
-    { name: 'Pecahan',     sample: '{1/2} + {1/3}', type: 'frac', lanes: 4, bpmStage: 2, noteEveryBeats: 4,
+    { name: 'Pecahan',     sample: '{1/2} + {1/3}', type: 'frac', glyph: '{1/2}', lanes: 3, bpmStage: 2, noteEveryBeats: 4,
       tierLabels: ['Penyebut sama, kecil', 'Penyebut sama + perkalian', 'Penyebut berbeda (kelipatan)',
                    'Semua operasi', 'Penyebut besar', 'Campuran tahap 1-5'],
       fracTiers: [
@@ -144,7 +147,7 @@ NA.CONFIG = {
     //   mulWhole divWhole   decimal x whole number (2-9), decimal / whole number (comes out exact)
     //   mulDec divDec       decimal x 0.2-0.9, decimal / 0.2-0.9 (comes out exact)
     // Wrong choices include the classic slip of misplacing the decimal point (x10, /10).
-    { name: 'Desimal',     sample: '0.32 + 0.67', type: 'dec', lanes: 4, bpmStage: 2, noteEveryBeats: 4,
+    { name: 'Desimal',     sample: '0.32 + 0.67', type: 'dec', glyph: '0.5', lanes: 3, bpmStage: 2, noteEveryBeats: 4,
       tierLabels: ['Tambah & kurang, 1 desimal', 'Kali bilangan bulat', 'Dua desimal, bagi bilangan bulat',
                    'Kali & bagi desimal', 'Bilangan lebih besar', 'Campuran tahap 1-5'],
       decTiers: [
