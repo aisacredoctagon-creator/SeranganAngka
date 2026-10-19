@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Problem tests - running</title>
+<style>
+  body { font: 14px/1.5 ui-monospace, Consolas, monospace; margin: 24px; background: #F5F2FF; color: #1B1340; }
+  h1 { font: 700 20px system-ui; margin: 0 0 4px; }
+  .PASS { color: #0B7A59; font-weight: 700; } .FAIL { color: #E5254B; font-weight: 700; }
+  li { margin: 2px 0; list-style: none; } ul { padding-left: 0; }
+  pre { background: #fff; padding: 8px; border-radius: 6px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Serangan Angka - problem generator tests</h1>
+<p id="summary">running…</p>
+<ul id="out"></ul>
+<pre id="samples"></pre>
+
+<script>window.NA = {};</script>
+<script src="../js/config.js"></script>
+<script src="../js/music.js"></script>
+<script src="../js/fractions.js"></script>
+<script src="../js/problems.js"></script>
+<script>
+/*
+ * An INDEPENDENT checker: it never calls the generator's own maths. It parses the problem text and the
+ * answer choices, solves the problem with exact integer fractions, and requires that EXACTLY ONE choice is right
+ * and that it is the choice the generator marked as correct.
+ */
+(function () {
+  const C = NA.CONFIG, out = document.getElementById('out');
+  let fails = 0;
+  const line = (ok, text) => { if (!ok) fails++; const li = document.createElement('li'); li.innerHTML = `<span class="${ok ? 'PASS' : 'FAIL'}">${ok ? 'PASS' : 'FAIL'}</span> ${text}`; out.appendChild(li); };
+
+  // ---- exact rationals [n, d]
+  const g = (a, b) => (b ? g(b, a % b) : Math.abs(a));
+  const R = (n, d) => { const k = g(n, d) || 1; return [n / k, d / k]; };
+  const eq = (a, b) => a[0] * b[1] === b[0] * a[1];
+  const add = (a, b) => R(a[0] * b[1] + b[0] * a[1], a[1] * b[1]);
+  const sub = (a, b) => R(a[0] * b[1] - b[0] * a[1], a[1] * b[1]);
+  const mul = (a, b) => R(a[0] * b[0], a[1] * b[1]);
+  const div = (a, b) => R(a[0] * b[1], a[1] * b[0]);
+  const cmp = (a, b) => Math.sign(a[0] * b[1] - b[0] * a[1]);
+
+  // ---- parsing
+  const TOKEN = /\{(?:(\d+) )?([\d?]+)\/([\d?]+)\}/g;
+  const parseDecimal = (s) => { const [i, f = ''] = s.split('.'); return R(parseInt(i + f, 10), Math.pow(10, f.length)); };
+  // an operand/option: "{3/4}", "{2 1/3}", "5", "0.75"  (percent handled by caller)
+  function parseValue(s) {
+    let m = /^\{(?:(\d+) )?(\d+)\/(\d+)\}$/.exec(s);
+    if (m) return { kind: m[1] ? 'mixed' : 'frac', v: R((m[1] ? +m[1] : 0) * +m[3] + +m[2], +m[3]), n: +m[2], d: +m[3], w: m[1] ? +m[1] : 0 };
+    if (/^\d+$/.test(s)) return { kind: 'int', v: [+s, 1] };
+    if (/^\d+\.\d+$/.test(s)) return { kind: 'dec', v: parseDecimal(s) };
+    if (/^\d+(\.\d+)?%$/.test(s)) return { kind: 'pct', v: div(parseDecimal(s.slice(0, -1).includes('.') ? s.slice(0, -1) : s.slice(0, -1) + '.0'), [100, 1]) };
+    return null;
+  }
+  // splits "A op B" into its two operand strings
+  function splitOp(text) {
+    const m = /^(\{[^}]*\}|[\d.]+) ([+−×÷]) (\{[^}]*\}|[\d.]+)$/.exec(text);
+    return m ? { a: m[1], op: m[2], b: m[3] } : null;
+  }
+
+  // returns the list of option indexes that are correct, or an error string
+  function solve(p, lanes) {
+    const { text, options } = p;
+    let m;
+    // compare: "{a} ? {b}"  -> options < = >
+    if ((m = /^(\{[^}]*\}) \? (\{[^}]*\})$/.exec(text))) {
+      const a = parseValue(m[1]).v, b = parseValue(m[2]).v, s = cmp(a, b);
+      return options.map((o, i) => (o === (s < 0 ? '<' : s > 0 ? '>' : '=') ? i : -1)).filter((i) => i >= 0);
+    }
+    // simplify: exactly ONE option may be in lowest terms and equal in value
+    if ((m = /^Sederhanakan (\{[^}]*\})$/.exec(text))) {
+      const a = parseValue(m[1]);
+      return options.map((o, i) => { const q = parseValue(o); return q && eq(q.v, a.v) && g(q.n === undefined ? q.v[0] : q.n, q.d === undefined ? 1 : q.d) === 1 ? i : -1; }).filter((i) => i >= 0);
+    }
+    // equivalent fractions: "{a/b} = {?/D}" or "{a/b} = {N/?}"
+    if ((m = /^(\{[^}]*\}) = \{(\?|\d+)\/(\?|\d+)\}$/.exec(text))) {
+      const a = parseValue(m[1]).v;
+      return options.map((o, i) => {
+        const x = +o;
+        const f = m[2] === '?' ? R(x, +m[3]) : R(+m[2], x);
+        return eq(f, a) ? i : -1;
+      }).filter((i) => i >= 0);
+    }
+    // "{...} = ?" conversions
+    if ((m = /^(\{[^}]*\}) = \?$/.exec(text))) {
+      const src = parseValue(m[1]);
+      return options.map((o, i) => {
+        const q = parseValue(o);
+        if (!q) return -1;
+        if (q.kind === 'pct') return eq(q.v, div(src.v, [1, 1])) ? i : -1;                // percent: value/100 == src
+        return eq(q.v, src.v) ? i : -1;
+      }).filter((i) => i >= 0);
+    }
+    // arithmetic: "A op B"
+    const o = splitOp(text);
+    if (o) {
+      const a = parseValue(o.a), b = parseValue(o.b);
+      let r;
+      if (o.op === '+') r = add(a.v, b.v); else if (o.op === '−') r = sub(a.v, b.v);
+      else if (o.op === '×') r = mul(a.v, b.v); else r = div(a.v, b.v);
+      return options.map((x, i) => { const q = parseValue(x); return q && eq(q.v, r) ? i : -1; }).filter((i) => i >= 0);
+    }
+    return `unrecognised problem: ${text}`;
+  }
+
+  // ---- distinct options: by value, except "simplify" (one lowest-terms answer, equal-valued partial simplifications allowed)
+  function optionsDistinct(p) {
+    const seen = new Set();
+    for (const o of p.options) {
+      let k;
+      if (/^Sederhanakan/.test(p.text)) k = o;
+      else if (['<', '=', '>'].includes(o)) k = o;
+      else { const q = parseValue(o); if (!q) return false; k = o.endsWith('%') ? 'p' + q.v.join('/') : q.v.join('/'); }
+      if (seen.has(k)) return false;
+      seen.add(k);
+    }
+    return true;
+  }
+  const TOKENS_OK = (s) => { const stripped = s.replace(TOKEN, ''); return stripped.indexOf('{') < 0 && stripped.indexOf('}') < 0; };
+
+  function check(levelIdx, tier, lanes, N) {
+    const res = { n: 0, bad: [], types: {}, maxText: 0 };
+    for (let i = 0; i < N; i++) {
+      const p = NA.makeProblem(levelIdx, tier, lanes);
+      res.n++;
+      const wantLen = p.meta && p.meta.type === 'compare' ? 3 : lanes;
+      const sol = solve(p, lanes);
+      const t = p.meta ? p.meta.type : NA.CONFIG.levels[levelIdx].type;
+      res.types[t] = (res.types[t] || 0) + 1;
+      let why = null;
+      if (typeof sol === 'string') why = sol;
+      else if (p.options.length !== wantLen) why = `has ${p.options.length} options, wanted ${wantLen}`;
+      else if (sol.length !== 1) why = `${sol.length} correct options [${sol.join(',')}]`;
+      else if (sol[0] !== p.correct) why = `marked ${p.correct} but the right one is ${sol[0]}`;
+      else if (!optionsDistinct(p)) why = 'two options have the same value';
+      else if (p.options.some((o) => { const q = parseValue(o); return q && q.v[0] < 0; })) why = 'negative option';
+      else if (!TOKENS_OK(p.text) || !p.options.every(TOKENS_OK)) why = 'malformed token';
+      else if (!p.solution || !TOKENS_OK(p.solution)) why = 'missing/malformed solution';
+      else if (NA.fmt.plain(p.options[p.correct]) !== NA.fmt.plain(p.answer)) why = 'answer string differs from marked option';
+      if (why) { res.bad.push(`${p.text} → [${p.options.join(' | ')}] ${why}`); }
+      res.maxText = Math.max(res.maxText, NA.fmt.plain(p.text).length);
+    }
+    return res;
+  }
+
+  // ============================================================ every level has the same structure
+  {
+    const REQUIRED = ['name', 'sample', 'type', 'lanes', 'bpmStage', 'noteEveryBeats'];
+    const issues = [];
+    C.levels.forEach((L, i) => {
+      REQUIRED.forEach((k) => { if (L[k] === undefined) issues.push(`L${i + 1} missing ${k}`); });
+      if (!C.keys[L.lanes] || !C.laneColors[L.lanes]) issues.push(`L${i + 1}: no keys/colours for ${L.lanes} lanes`);
+      C.difficulties.forEach((d) => { if (!d.bpm[L.bpmStage]) issues.push(`L${i + 1}: no BPM for stage ${L.bpmStage} in ${d.id}`); });
+      const tr = NA.MUSIC.tracks[i];
+      if (!tr) issues.push(`L${i + 1}: no music track`);
+      else {
+        if (tr.name !== L.name) issues.push(`L${i + 1}: music track is "${tr.name}", level is "${L.name}"`);
+        if (!tr.melody || !tr.chords || !tr.style || !tr.lead || !tr.key) issues.push(`L${i + 1}: incomplete music track`);
+      }
+      if (L.type === 'frac' && !(L.fracTiers && L.fracTiers.length === 5)) issues.push('fraction level needs 5 fracTiers');
+      if (L.type === 'dec' && !(L.decTiers && L.decTiers.length === 5)) issues.push('decimal level needs 5 decTiers');
+      if (L.tierLabels && L.tierLabels.length !== C.tiers.length) issues.push(`L${i + 1}: tierLabels must have ${C.tiers.length} entries`);
+      if (!NA.fmt.html(L.sample)) issues.push(`L${i + 1}: sample does not render`);
+    });
+    if (NA.MUSIC.tracks.length !== C.levels.length) issues.push(`${NA.MUSIC.tracks.length} music tracks for ${C.levels.length} levels`);
+    line(issues.length === 0, `level data: all ${C.levels.length} levels (incl. Pecahan and Desimal) have the same fields, a music track (key/chords/melody), keys, colours and BPM for every difficulty${issues.length ? '<br>' + issues.join('<br>') : ''}`);
+  }
+
+  // ============================================================ every level x tier x lane count
+  const N = 700;
+  C.levels.forEach((L, li) => {
+    const lanesList = [3, 4];
+    let total = 0, badTotal = 0, firstBad = [];
+    const types = {};
+    for (let t = 0; t < 5; t++) for (const lanes of lanesList) {
+      const r = check(li, t, lanes, N);
+      total += r.n; badTotal += r.bad.length; firstBad = firstBad.concat(r.bad.slice(0, 2));
+      Object.entries(r.types).forEach(([k, v]) => { types[k] = (types[k] || 0) + v; });
+    }
+    const typeList = Object.entries(types).map(([k, v]) => `${k}:${v}`).join(' ');
+    line(badTotal === 0, `<b>L${li + 1} ${L.name}</b> (${L.type}): ${total} problems, ${badTotal} with a wrong, missing or duplicate answer${badTotal ? '<br>' + firstBad.slice(0, 4).join('<br>') : ''} - kinds: ${typeList}`);
+  });
+
+  // ============================================================ the fraction tiers really differ
+  {
+    const L = C.levels.findIndex((l) => l.type === 'frac');
+    const per = [];
+    let ok = true;
+    for (let t = 0; t < 5; t++) {
+      const types = {};
+      for (let i = 0; i < 1500; i++) { const p = NA.makeProblem(L, t, 4); types[p.meta.type] = (types[p.meta.type] || 0) + 1; }
+      const wanted = Object.keys(C.levels[L].fracTiers[t].types);
+      const missing = wanted.filter((k) => !types[k]);
+      const extra = Object.keys(types).filter((k) => !wanted.includes(k));
+      if (missing.length || extra.length) ok = false;
+      per.push(`T${t + 1}: ${Object.keys(types).length} kinds${missing.length ? ' MISSING ' + missing : ''}${extra.length ? ' UNEXPECTED ' + extra : ''}`);
+    }
+    line(ok, `fraction tiers produce exactly the configured problem kinds (${per.join('; ')})`);
+  }
+
+  // ============================================================ decimals + fractions: only + - x / ; tiers really differ
+  {
+    const OPS = { add: '+', sub: '−', mulWhole: '×', mulDec: '×', divWhole: '÷', divDec: '÷' };
+    const FOPS = { addSame: '+', addUnlike: '+', subSame: '−', subUnlike: '−', mul: '×', div: '÷' };
+    const probs = [];
+    [['dec', OPS, 'decTiers'], ['frac', FOPS, 'fracTiers']].forEach(([type, map, key]) => {
+      const L = C.levels.findIndex((l) => l.type === type);
+      let ok = true;
+      const rows = [];
+      for (let t = 0; t < 5; t++) {
+        const wanted = new Set(Object.keys(C.levels[L][key][t].types).map((k) => map[k]));
+        const seen = new Set();
+        let maxDigits = 0, zeros = 0, tooBig = 0;
+        for (let i = 0; i < 900; i++) {
+          const p = NA.makeProblem(L, t, 4);
+          const m = /^(?:Sederhanakan )?(\{[^}]*\}|[\d.]+) ([+−×÷]) (\{[^}]*\}|[\d.]+)$/.exec(p.text);
+          if (!m) { ok = false; rows.push('T' + (t + 1) + ' unexpected form: ' + p.text); break; }
+          seen.add(m[2]);
+          if (type === 'dec') {
+            maxDigits = Math.max(maxDigits, m[1].replace('.', '').length, m[3].replace('.', '').length);
+            if (/\.\d+0$/.test(m[1]) || /\.\d+0$/.test(m[3])) zeros++;           // "2.50" is wrong, "2.0" is fine
+            if (p.options.some((o) => /\.\d{4,}/.test(o))) tooBig++;
+          }
+        }
+        const same = seen.size === wanted.size && [...wanted].every((o) => seen.has(o));
+        if (!same || zeros || tooBig) ok = false;
+        rows.push(`T${t + 1}[${[...seen].join(' ')}${type === 'dec' ? `, digits ≤${maxDigits}` : ''}${same ? '' : ' EXPECTED ' + [...wanted].join(' ')}${zeros ? ' TRAILING ZEROS' : ''}${tooBig ? ' LONG OPTIONS' : ''}]`);
+      }
+      line(ok, `<b>${type === 'dec' ? 'Desimal' : 'Pecahan'}</b> asks only the four basic operations, and each tier uses exactly the configured ones: ${rows.join('; ')}`);
+    });
+  }
+
+  // ============================================================ samples + rendering helpers
+  {
+    const L = C.levels.findIndex((l) => l.type === 'frac');
+    const rows = [];
+    for (let t = 0; t < 5; t++) { for (let k = 0; k < 4; k++) { const p = NA.makeProblem(L, t, 4); rows.push(`T${t + 1} [${p.meta.type}] ${NA.fmt.plain(p.text)}  →  ${p.options.map((o, i) => (i === p.correct ? '*' : '') + NA.fmt.plain(o)).join('   ')}`); } }
+    document.getElementById('samples').textContent = rows.join('\n');
+    const html = NA.fmt.html('{2 1/3} + {?/4} < 5');
+    line(html.includes('class="mx"') && html.includes('class="fn q"') && html.includes('&lt;') && NA.fmt.plain('{2 1/3} = ?') === '2 1/3 = ?',
+      'notation: mixed numbers, missing-number placeholder and "<" escaping render correctly');
+  }
+
+  document.getElementById('summary').innerHTML = fails ? `<span class="FAIL">${fails} check(s) FAILED</span>` : '<span class="PASS">ALL CHECKS PASSED</span>';
+  document.title = fails ? `Problem tests - ${fails} FAILED` : 'Problem tests - ALL PASS';
+})();
+</script>
+</body>
+</html>

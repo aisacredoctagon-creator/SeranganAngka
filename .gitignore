@@ -1,0 +1,32 @@
+# Dependencies / build output (not used by this static project today, ignored in case they appear)
+node_modules/
+dist/
+build/
+coverage/
+
+# Secrets - never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+*.tmp
+*.swp
+~$*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# Local tooling config (machine-specific preview launcher)
+.claude/
+
+# Scratch audio used while testing the optional audio-file hook
+assets/audio/_test-*
