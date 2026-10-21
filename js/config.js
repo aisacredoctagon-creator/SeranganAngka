@@ -47,10 +47,8 @@ NA.CONFIG = {
     { digits: [3, 3], correct: 5,           label: '3 angka & 3 angka' },
     { mix: [0, 1, 2, 3, 4],                 label: 'Campuran tahap 1-5' },      // default: 10 correct
   ],
-  // Gap between answer choices (choices are a tight cluster: x, x+step, x+2*step, sorted
-  // low -> high, with the right answer at a random place). One value per digit tier (1-5);
-  // smaller = choices closer together = harder.
-  distractorStep: [3, 2, 2, 1, 1],
+  // Answer choices: levels 1-5 give 3 choices that all END IN THE SAME DIGIT (45, 65, 15): the wrong ones are the right
+  // answer +/- a multiple of 10 (js/problems.js), so the answer cannot be guessed from the last digit.
 
   // ===================== 4. MOVEMENT MODE ==================================
   movementMode: 'smooth',   // 'smooth' = continuous fall | 'step' = one eased step per beat
@@ -87,37 +85,36 @@ NA.CONFIG = {
   },
   // Accent colour of each answer card. These are CSS variables - the actual colours live in css/style.css (:root).
   laneColors: {
-    3: ['var(--c-lane-coral)', 'var(--c-lane-green)', 'var(--c-lane-purple)'],
-    4: ['var(--c-lane-coral)', 'var(--c-lane-green)', 'var(--c-lane-blue)', 'var(--c-lane-purple)'],
-    5: ['var(--c-lane-coral)', 'var(--c-lane-amber)', 'var(--c-lane-green)', 'var(--c-lane-blue)', 'var(--c-lane-purple)'],
+    3: ['var(--c-lane-1)', 'var(--c-lane-2)', 'var(--c-lane-3)'],
+    4: ['var(--c-lane-1)', 'var(--c-lane-2)', 'var(--c-lane-4)', 'var(--c-lane-3)'],
+    5: ['var(--c-lane-1)', 'var(--c-lane-2)', 'var(--c-lane-4)', 'var(--c-lane-3)', 'var(--c-lane-5)'],
   },
 
   // ===================== TEMPO ==============================================
-  // bpm = [stage 0, stage 1, stage 2]; each level picks a stage via levels[].bpmStage.
+  // The same for EVERY level: bpm = tempo, scoreMult = multiplier on all points (on top of the combo multiplier).
   difficulties: [
-    { id: 'easy',   label: 'Mudah',    bpm: [60, 70, 80] },
-    { id: 'medium', label: 'Menengah', bpm: [80, 90, 100] },
-    { id: 'hard',   label: 'Susah',    bpm: [100, 110, 120] },
+    { id: 'easy',   label: 'Mudah',  bpm: 60,  scoreMult: 0.5 },
+    { id: 'medium', label: 'Sedang', bpm: 100, scoreMult: 1 },
+    { id: 'hard',   label: 'Susah',  bpm: 120, scoreMult: 1.5 },
   ],
 
   // ===================== LEVELS ============================================
   // lanes          answer choices on screen (3 or 4)
-  // bpmStage       0/1/2 -> which BPM in difficulties[].bpm (rises from level 4)
   // noteEveryBeats a problem reaches the line every N beats (4 -> 3 -> 2 in later levels)
   // cap            [max digits big number, max digits small number] for mul/div
   //                (so 3-digit x 3-digit multiplication never happens)
   // glyph          symbol shown on the level card (menu)
   // tierLabels     optional text shown when a tier starts (default: the digit labels in `tiers`)
   levels: [
-    { name: 'Penjumlahan', sample: '7 + 5',     type: 'add', glyph: '+',  lanes: 3, bpmStage: 0, noteEveryBeats: 4 },
-    { name: 'Perkalian',   sample: '3 × 4',     type: 'mul', glyph: '×',  lanes: 3, bpmStage: 0, noteEveryBeats: 4, cap: [2, 2] },
-    { name: 'Pengurangan', sample: '8 - 4',     type: 'sub', glyph: '−',  lanes: 3, bpmStage: 0, noteEveryBeats: 3 },
-    { name: 'Pembagian',   sample: '4 ÷ 2',     type: 'div', glyph: '÷',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, cap: [2, 1] },
-    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix', glyph: '±',  lanes: 3, bpmStage: 1, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
+    { name: 'Penjumlahan', sample: '7 + 5',     type: 'add', glyph: '+',  lanes: 3, noteEveryBeats: 4 },
+    { name: 'Perkalian',   sample: '3 × 4',     type: 'mul', glyph: '×',  lanes: 3, noteEveryBeats: 4, cap: [2, 2] },
+    { name: 'Pengurangan', sample: '8 - 4',     type: 'sub', glyph: '−',  lanes: 3, noteEveryBeats: 3 },
+    { name: 'Pembagian',   sample: '4 ÷ 2',     type: 'div', glyph: '÷',  lanes: 3, noteEveryBeats: 3, cap: [2, 1] },
+    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix', glyph: '±',  lanes: 3, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
     // Pecahan / Desimal: 3 answer choices like every other level, and ALL choices END THE SAME WAY so the answer cannot be
     // guessed from the last digit: decimals share the last decimal digit (5.37 / 5.47 / 5.57) and fractions share the
     // denominator ({3/8} / {5/8} / {7/8}). The generators in problems.js / fractions.js enforce it.
-    // Pecahan / Desimal use the SAME fields as every other level (lanes, bpmStage, noteEveryBeats, tiers by correct
+    // Pecahan / Desimal use the SAME fields as every other level (lanes, noteEveryBeats, tiers by correct
     // answers, melody track in music.js). They only ask the four basic operations (+ - x /); the difficulty comes
     // from the numbers. They get 4 beats per problem because "3/4 x 2/3" or "4.5 / 0.5" needs more thinking time
     // than "7 + 5".
@@ -126,7 +123,7 @@ NA.CONFIG = {
     //   noImproper (same-denominator sums stay <= 1), types = weights of the problem kinds. Available kinds:
     //   addSame subSame addUnlike subUnlike mul div   (fractions.js also has simplify, compare, equiv, mixedToImproper,
     //   improperToMixed, toDecimal, toPercent - not used by default; add them here to switch them on again).
-    { name: 'Pecahan',     sample: '{1/2} + {1/3}', type: 'frac', glyph: '{1/2}', lanes: 3, bpmStage: 2, noteEveryBeats: 4,
+    { name: 'Pecahan',     sample: '{1/2} + {1/3}', type: 'frac', glyph: '{1/2}', lanes: 3, noteEveryBeats: 4,
       tierLabels: ['Penyebut sama, kecil', 'Penyebut sama + perkalian', 'Penyebut berbeda (kelipatan)',
                    'Semua operasi', 'Penyebut besar', 'Campuran tahap 1-5'],
       fracTiers: [
@@ -147,7 +144,7 @@ NA.CONFIG = {
     //   mulWhole divWhole   decimal x whole number (2-9), decimal / whole number (comes out exact)
     //   mulDec divDec       decimal x 0.2-0.9, decimal / 0.2-0.9 (comes out exact)
     // Wrong choices include the classic slip of misplacing the decimal point (x10, /10).
-    { name: 'Desimal',     sample: '0.32 + 0.67', type: 'dec', glyph: '0.5', lanes: 3, bpmStage: 2, noteEveryBeats: 4,
+    { name: 'Desimal',     sample: '0.32 + 0.67', type: 'dec', glyph: '0.5', lanes: 3, noteEveryBeats: 4,
       tierLabels: ['Tambah & kurang, 1 desimal', 'Kali bilangan bulat', 'Dua desimal, bagi bilangan bulat',
                    'Kali & bagi desimal', 'Bilangan lebih besar', 'Campuran tahap 1-5'],
       decTiers: [

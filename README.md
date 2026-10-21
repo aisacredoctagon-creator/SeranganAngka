@@ -31,7 +31,9 @@ serve.js                server statis kecil untuk pengembangan lokal
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
 - Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
-- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Cepat/Lambat** ±400 ms (benar tapi kurang pas: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = Miss: combo putus, nyawa −1.
+- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Cepat/Lambat** ±400 ms (benar tapi kurang pas: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
+- **Kesulitan** (sama untuk semua level): Mudah = 60 BPM, poin ×0,5 · Sedang = 100 BPM, poin ×1 · Susah = 120 BPM, poin ×1,5. Pengali ini dikalikan dengan pengali combo.
+- Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
 - Semua level terbuka sejak awal (tidak ada kunci level); "Lanjut Level" di layar hasil selalu tampil dan kembali ke level 1 setelah level terakhir.
@@ -47,7 +49,8 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Tahap kesulitan (naik per **jumlah jawaban benar**, bukan skor) | `tiers[].{digits,correct}`, `defaultCorrect` (10) |
 | Kedekatan pilihan jawaban | `distractorStep` (per tahap; kecil = lebih dekat) |
 | Mode gerak | `movementMode: 'smooth' \| 'step'`, `step.moveFraction` |
-| Jumlah jalur, BPM, kecepatan per level | `levels[].{lanes,bpmStage,noteEveryBeats}`, `difficulties[].bpm` |
+| Jumlah jalur, jarak antar soal per level | `levels[].{lanes,noteEveryBeats}` |
+| BPM dan pengali poin per kesulitan | `difficulties[].{bpm,scoreMult}` |
 | Nyawa, combo, bintang | `lives`, `comboStep`, `maxMultiplier`, `stars` |
 | Tombol keyboard & warna jalur | `keys`, `laneColors` (warna jalur merujuk variabel CSS `--c-lane-*`) |
 
@@ -71,10 +74,10 @@ Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`. Mode gerak juga bisa dig
 - Tes: `http://localhost:8123/tests/problems-test.html` menghitung ulang jawaban setiap soal dengan aritmetika pecahan eksak dan memastikan tepat satu pilihan yang benar (49.000 soal, semua level).
 
 ## Sistem suara
-Tiga lapisan suara, masing-masing punya tombol bisu + slider volume (ikon speaker di menu utama, dan di layar Jeda):
+Tiga lapisan suara di mesin audio, dengan dua kontrol di layar (tombol bisu + slider volume; tombol "Suara" di menu utama dan layar Jeda). Slider **Efek** mengatur **Melodi dan Efek sekaligus**:
 - **Musik**: backing (drum, bass, harmoni) yang berjalan terus, mengikuti BPM game.
 - **Melodi**: dimainkan oleh pemain. Tiap jawaban benar = nada berikutnya dari melodi level itu, dikunci ke grid ketukan (`quantize`). Jawaban benar berturut-turut membentuk melodi utuh. Jawaban salah = satu nada di luar tangga nada (bergeser satu semitone dan sedikit fals), melodi **tidak** maju dan terbisukan sebentar. Soal yang terlewat tanpa dijawab = melodi terbisukan sebentar + bunyi "tuk" tanpa nada (bukan nada fals, karena bukan jawaban yang salah), melodi tidak maju.
-- **Efek**: klik menu dan jingle akhir level.
+- **Efek**: klik menu dan jingle akhir level. (Satu slider "Efek" di layar mengendalikan lapisan Melodi dan Efek bersama-sama.)
 
 Data musik tiap level (kunci, chord, gaya backing, instrumen, urutan melodi) ada di `js/music.js`. Semua melodi memakai tangga nada pentatonik dari kunci levelnya, jadi nada mana pun terdengar serasi di atas chord mana pun, kapan pun pemain menekannya.
 
@@ -92,9 +95,11 @@ Buka `http://localhost:8123/tests/audio-test.html` (setelah `node serve.js`). Ha
 ### Memasang backing dari ElevenLabs (atau sumber audio lain)
 Connector ElevenLabs yang terpasang di sesi pembuatan hanya mendukung suara/ucapan, bukan musik. Langkah:
 1. Pasang connector ElevenLabs lengkap: Settings → Connectors → Add custom connector → `https://api.elevenlabs.io/v1/mcp`.
-2. Minta backing instrumental **tanpa melodi/vokal**, loop 8 birama 4/4, kunci dan chord sesuai `js/music.js`, untuk tiap level dan BPM yang dipakai (21 file: L1–L3 di 60/80/100 BPM, L4–L5 di 70/90/110, L6–L7 di 80/100/120).
+2. Minta backing instrumental **tanpa melodi/vokal**, loop 8 birama 4/4, kunci dan chord sesuai `js/music.js`, untuk tiap level dan BPM yang dipakai (21 file: tiap level di 60, 100, dan 120 BPM).
 3. Simpan di `assets/audio/` dan daftarkan di `tracks[n].files` (lihat `assets/audio/README.md`). Pastikan tempo file tepat; musik hasil AI sering sedikit meleset, jadi cek dan, bila perlu, stretch ke BPM persis dan potong tepat di birama.
 4. Jalankan lewat `node serve.js` (bukan `file://`). Bila file gagal dimuat, game otomatis kembali ke backing sintesis.
 
 ## Tampilan
-UI mengikuti desain Figma "Alat Peraga Digital" (flat modern, aksen coral). Semua token (warna, font, radius, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Fredoka, Rubik, Outfit, Plus Jakarta Sans (Google Fonts).
+UI mengikuti desain Figma "Alat Peraga Digital" bagian "Pop Play" (latar krem, outline tebal gelap, bayangan datar, aksen oranye). Semua token (warna, font, radius, outline, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Rubik (angka, judul) dan Fredoka One (tombol, nama level) dari Google Fonts. Badge penilaian menampilkan poin + penilaian, mis. "+100 SEMPURNA!".
+
+Garis putus-putus pemisah jalur bergerak turun secepat soal jatuh (dan berhenti saat jeda); garis target punya zona merah transparan di bawahnya. Judul menu dan kartu level punya animasi (dimatikan jika perangkat meminta *reduced motion*).

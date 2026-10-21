@@ -19,6 +19,8 @@
     'play': '<polygon points="6 3 20 12 6 21 6 3"/>',
     'pause': '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>',
     'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    'house': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    'chevrons-right': '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
@@ -32,19 +34,19 @@
   const KEY = 'serangan-angka.v1';
   const save = { best: {}, level: 0, diff: 0, vol: {}, mute: {} };
   try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* private mode */ }
-  // Sound settings per channel (older saves only had on/off for sfx + music).
+  // Sound settings. The panel has two sliders: Musik, and Efek = the melody you play AND the sound effects together
+  // (two audio buses, one control). Older saves stored melody / sfx separately: the sfx value is used for Efek.
   const CHANNELS = [
-    { id: 'music',  label: 'Musik',  icon: 'music' },
-    { id: 'melody', label: 'Melodi', icon: 'audio-lines' },
-    { id: 'sfx',    label: 'Efek',   icon: 'volume-2' },
+    { id: 'music', label: 'Musik', icon: 'music', buses: ['music'] },
+    { id: 'fx',    label: 'Efek',  icon: 'volume-2', buses: ['melody', 'sfx'] },
   ];
   save.vol = save.vol || {};
   save.mute = save.mute || {};
-  CHANNELS.forEach((c) => {
-    if (typeof save.vol[c.id] !== 'number') save.vol[c.id] = NA.MUSIC.volumeDefaults[c.id];
-    if (typeof save.mute[c.id] !== 'boolean') save.mute[c.id] = false;
-  });
-  if (save.sfx === false) save.mute.sfx = true;
+  if (typeof save.vol.music !== 'number') save.vol.music = NA.MUSIC.volumeDefaults.music;
+  if (typeof save.vol.fx !== 'number') save.vol.fx = typeof save.vol.sfx === 'number' ? save.vol.sfx : NA.MUSIC.volumeDefaults.sfx;
+  if (typeof save.mute.music !== 'boolean') save.mute.music = false;
+  if (typeof save.mute.fx !== 'boolean') save.mute.fx = !!save.mute.sfx;
+  if (save.sfx === false) save.mute.fx = true;
   if (save.music === false) save.mute.music = true;
   delete save.sfx;
   delete save.music;
@@ -66,6 +68,7 @@
     document.body.classList.toggle('playing', name === 'game');          // hides the decorative background while playing
     $('overlay-pause').classList.remove('open');
     $('countdown').classList.remove('open');
+    $('screen-game').classList.remove('paused');
     if (name === 'menu') { renderMenu(); }
   }
 
@@ -98,21 +101,23 @@
     renderMotion();
   }));
 
-  // Level cards: label + status dot + name + operator tile (desktop grid), a row with a chevron (phone list).
+  // Level cards: coloured "LEVEL n" badge + status dot + name + operator tile; the chosen card gets a "DIPILIH" tag.
   function renderLevels() {
     const box = $('levels');
     box.innerHTML = '';
+    $('lv-count').textContent = `${C.levels.length} Level Terbuka`;
     C.levels.forEach((L, i) => {
       const on = i === save.level;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'level' + (on ? ' selected' : '');
+      b.dataset.tone = i % 7;                                              // colour of the card (css: --lv)
       b.setAttribute('aria-pressed', String(on));
       b.innerHTML =
-        `<span class="lv-top"><span class="lv-num">Level ${i + 1}</span><i class="lv-dot"></i></span>` +
+        (on ? '<span class="lv-picked">DIPILIH</span>' : '') +
+        `<span class="lv-top"><span class="lv-num">LEVEL ${i + 1}</span><i class="lv-dot"></i></span>` +
         `<span class="lv-name">${L.name}</span>` +
-        `<span class="lv-well"><span class="lv-sym">${NA.fmt.html(L.glyph || L.sample)}</span></span>` +
-        `<span class="lv-go"><span class="go-chevron">${NA.icon('chevron-right', 16)}</span><span class="go-play">${NA.icon('play', 14)}</span></span>`;
+        `<span class="lv-sym">${NA.fmt.html(L.glyph || L.sample)}</span>`;
       b.addEventListener('click', () => { save.level = i; persist(); renderLevels(); renderHint(); });
       box.appendChild(b);
     });
@@ -148,18 +153,18 @@
         const range = row.querySelector('.snd-range');
         row.querySelector('.snd-mute').addEventListener('click', () => {
           save.mute[ch] = !save.mute[ch];
-          A.setMute(ch, save.mute[ch]);
+          applyChannel(ch);
           persist();
           syncSound();
         });
         range.addEventListener('input', (e) => {
           save.vol[ch] = e.target.value / 100;
-          if (save.mute[ch] && save.vol[ch] > 0) { save.mute[ch] = false; A.setMute(ch, false); }   // moving the slider un-mutes
-          A.setVolume(ch, save.vol[ch]);
+          if (save.mute[ch] && save.vol[ch] > 0) save.mute[ch] = false;                              // moving the slider un-mutes
+          applyChannel(ch);
           persist();
           syncSound();
         });
-        range.addEventListener('change', () => { if (ch === 'sfx') { A.init(); A.click(); } });
+        range.addEventListener('change', () => { if (ch === 'fx') { A.init(); A.click(); } });
       });
     });
     syncSound();
@@ -178,7 +183,11 @@
       row.classList.toggle('off', m);
     });
   }
-  CHANNELS.forEach((c) => { A.setVolume(c.id, save.vol[c.id]); A.setMute(c.id, save.mute[c.id]); });
+  function applyChannel(id) {
+    const c = CHANNELS.find((x) => x.id === id);
+    c.buses.forEach((b) => { A.setVolume(b, save.vol[id]); A.setMute(b, save.mute[id]); });
+  }
+  CHANNELS.forEach((c) => applyChannel(c.id));
   buildSoundPanels();
 
   // menu pop-up
@@ -223,14 +232,16 @@
   // ---- Pause overlay / countdown ---------------------------------------------
   $('btn-pause').addEventListener('click', (e) => { e.currentTarget.blur(); G.pause(); });
   $('pause-resume').addEventListener('click', () => G.resume());
-  $('pause-restart').addEventListener('click', () => { $('overlay-pause').classList.remove('open'); G.restart(); });
+  $('pause-restart').addEventListener('click', () => { $('overlay-pause').classList.remove('open'); $('screen-game').classList.remove('paused'); G.restart(); });
   $('pause-menu').addEventListener('click', () => { G.stop(); show('menu'); });
 
-  G.onPause = (paused) => $('overlay-pause').classList.toggle('open', paused);
+  // while paused / counting down the moving dashed lines stand still too (css: .paused)
+  G.onPause = (paused) => { $('overlay-pause').classList.toggle('open', paused); $('screen-game').classList.toggle('paused', paused); };
   G.onCountdown = (n) => {
     const c = $('countdown');
-    if (n === null) { c.classList.remove('open'); return; }
+    if (n === null) { c.classList.remove('open'); $('screen-game').classList.remove('paused'); return; }
     c.classList.add('open');
+    $('screen-game').classList.add('paused');
     const num = $('countdown-num');
     num.textContent = n;
     num.classList.remove('tick'); void num.offsetWidth; num.classList.add('tick');
@@ -249,9 +260,9 @@
 
   function renderResults(r) {
     const L = C.levels[r.levelIdx];
-    $('res-stars').innerHTML = [1, 2, 3].map((n) => `<span class="star${n <= r.stars ? ' on' : ''}" style="--i:${n}">${NA.icon('star', 40)}</span>`).join('');
+    $('res-stars').innerHTML = [1, 2, 3].map((n) => `<span class="star${n <= r.stars ? ' on' : ''}" style="--i:${n}">${NA.icon('star', 30)}</span>`).join('');
     $('res-title').textContent = r.gameOver ? 'Nyawa Habis' : 'Selesai';
-    $('res-sub').textContent = `Level ${r.levelIdx + 1} - ${L.name} • ${r.bpm} BPM • Tahap ${r.tier}`;
+    $('res-sub').innerHTML = `<span>Level ${r.levelIdx + 1} - ${L.name}</span><i>•</i><span>${r.bpm} BPM</span><i>•</i><span>Tahap ${r.tier}</span>`;
     $('res-score').textContent = r.score.toLocaleString('en-US');
     $('res-acc').textContent = `${Math.round(r.accuracy * 100)}%`;
     $('res-combo').textContent = `×${r.maxStreak}`;
@@ -262,14 +273,18 @@
     });
     $('res-missbadge').textContent = `${r.miss} Soal Terlewat`;
     $('res-missbadge').hidden = r.miss === 0;
-    // "Kamu Menjawab {x}" -> label + answer chip; "Telat" -> a chip on its own
+    // "6 + 2 = 8" -> question + (green) answer; "Kamu Menjawab {x}" -> label + red answer; "Telat" -> a chip on its own
     $('res-review').innerHTML = r.review.length
       ? r.review.map((x) => {
         const m = /^Kamu Menjawab (.*)$/.exec(x.reason);
         const why = m
-          ? `<span class="rv-label">Kamu Menjawab</span><span class="rv-chip">${NA.fmt.html(m[1])}</span>`
-          : `<span class="rv-chip late">${NA.fmt.html(x.reason)}</span>`;
-        return `<li><span class="rv-q">${NA.fmt.html(x.text)}</span><span class="rv-why">${why}</span></li>`;
+          ? `<span class="rv-label">Kamu Menjawab</span><b class="rv-wrong">${NA.fmt.html(m[1])}</b>`
+          : `<span class="rv-label">${NA.fmt.html(x.reason)}</span>`;
+        const k = x.text.lastIndexOf(' = ');
+        const q = k < 0
+          ? NA.fmt.html(x.text)
+          : `${NA.fmt.html(x.text.slice(0, k + 3))}<span class="rv-ans">${NA.fmt.html(x.text.slice(k + 3))}</span>`;
+        return `<li><span class="rv-q">${q}</span><span class="rv-why">${why}</span></li>`;
       }).join('')
       : '<li class="rv-empty">Tidak ada yang salah. Keren!</li>';
   }

@@ -4,8 +4,8 @@
  * -> { text, options: [string x lanes, sorted low -> high], correct: index, answer: string, solution: string }
  *
  * Strings may contain fraction tokens such as {3/4} or {2 1/3}; render them with NA.fmt.html (js/fractions.js).
- * Whole-number and decimal levels: answer choices are a tight cluster around the right answer (e.g. 12, 13, 14)
- * with the right answer at a random position; the gap comes from CONFIG.distractorStep.
+ * Whole-number levels: the wrong choices are the right answer +/- a multiple of 10 (e.g. 45, 65, 15), so every choice ends
+ * in the same digit and the answer cannot be guessed from it. Decimals do the same with their last decimal digit.
  * Fraction levels: js/fractions.js (many problem types, "common mistake" distractors).
  */
 (function () {
@@ -33,42 +33,51 @@
     while (start < minVal) start += step;
     return Array.from({ length: lanes }, (_, i) => start + i * step);
   }
-  function assemble(text, ans, lanes, step, fmt) {
-    const vals = cluster(ans, lanes, step, 0);
-    const options = vals.map(fmt);
-    return { text, options, correct: vals.indexOf(ans), answer: fmt(ans) };
+  // Wrong choices = ans +/- 10, 20, 30 ... (nearer ones more likely), never below 1; sorted low -> high with the right one inside.
+  function sameEnding(ans, lanes) {
+    const pool = [];
+    for (let k = 1; k <= lanes + 3; k++) for (const s of [-1, 1]) {
+      const v = ans + s * 10 * k;
+      if (v >= 1) pool.push({ v, w: k + Math.random() * 1.6 });
+    }
+    pool.sort((a, b) => a.w - b.w);
+    return [ans, ...pool.slice(0, lanes - 1).map((x) => x.v)].sort((a, b) => a - b);
+  }
+  function assemble(text, ans, lanes, fmt) {
+    const vals = sameEnding(ans, lanes);
+    return { text, options: vals.map(fmt), correct: vals.indexOf(ans), answer: fmt(ans) };
   }
 
   const gens = {
-    add(L, t, lanes, step) {
+    add(L, t, lanes) {
       const [big, small] = digitsOf(L, t);
       let a = num(big), b = num(small);
       if (Math.random() < 0.5) [a, b] = [b, a];
-      return assemble(`${a} + ${b}`, a + b, lanes, step, String);
+      return assemble(`${a} + ${b}`, a + b, lanes, String);
     },
-    sub(L, t, lanes, step) {
+    sub(L, t, lanes) {
       const [big, small] = digitsOf(L, t);
       let a, b;
       do { a = num(big); b = num(small); } while (a === b);
       if (a < b) [a, b] = [b, a];
-      return assemble(`${a} − ${b}`, a - b, lanes, step, String);
+      return assemble(`${a} − ${b}`, a - b, lanes, String);
     },
-    mul(L, t, lanes, step) {
+    mul(L, t, lanes) {
       const [big, small] = digitsOf(L, t);
       let a = num(big, 2), b = num(small, 2);
       if (Math.random() < 0.5) [a, b] = [b, a];
-      return assemble(`${a} × ${b}`, a * b, lanes, step, String);
+      return assemble(`${a} × ${b}`, a * b, lanes, String);
     },
-    div(L, t, lanes, step) {
+    div(L, t, lanes) {
       const [big, small] = digitsOf(L, t);
       const q = num(big, 2), d = num(small, 2);
-      return assemble(`${q * d} ÷ ${d}`, q, lanes, step, String);
+      return assemble(`${q * d} ÷ ${d}`, q, lanes, String);
     },
 
     // Decimals: CONFIG.levels[n].decTiers[t] = { ints, places, types } - see config.js.
     // Whole parts of 1 digit may be 0 (0.32 + 0.67). Operands never end in a zero (3.40 would read as 3.4).
-    // Choices are spaced one unit of the second-last digit apart, so all end in the same digit (distractorStep is not used here).
-    dec(L, t, lanes, step) {
+    // Choices are spaced one unit of the second-last digit apart, so all end in the same digit.
+    dec(L, t, lanes) {
       const S = L.decTiers[t];
       const kind = weighted(S.types);
       const pow = (p) => Math.pow(10, p);
@@ -149,8 +158,7 @@
     const levels = NA.CONFIG.levels;
     let L = levels[levelIndex];
     if (L.type === 'mix') L = levels[pick(L.mixOf)];
-    const step = NA.CONFIG.distractorStep[digitTier] || 1;
-    const p = gens[L.type](L, digitTier, lanes, step);
+    const p = gens[L.type](L, digitTier, lanes);
     if (!p.solution) p.solution = `${p.text} = ${p.answer}`;       // sentence shown on the review screen
     return p;
   };

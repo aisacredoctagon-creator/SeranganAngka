@@ -148,12 +148,11 @@
 
   // ============================================================ every level has the same structure
   {
-    const REQUIRED = ['name', 'sample', 'type', 'lanes', 'bpmStage', 'noteEveryBeats'];
+    const REQUIRED = ['name', 'sample', 'type', 'lanes', 'noteEveryBeats'];
     const issues = [];
     C.levels.forEach((L, i) => {
       REQUIRED.forEach((k) => { if (L[k] === undefined) issues.push(`L${i + 1} missing ${k}`); });
       if (!C.keys[L.lanes] || !C.laneColors[L.lanes]) issues.push(`L${i + 1}: no keys/colours for ${L.lanes} lanes`);
-      C.difficulties.forEach((d) => { if (!d.bpm[L.bpmStage]) issues.push(`L${i + 1}: no BPM for stage ${L.bpmStage} in ${d.id}`); });
       const tr = NA.MUSIC.tracks[i];
       if (!tr) issues.push(`L${i + 1}: no music track`);
       else {
@@ -167,6 +166,29 @@
     });
     if (NA.MUSIC.tracks.length !== C.levels.length) issues.push(`${NA.MUSIC.tracks.length} music tracks for ${C.levels.length} levels`);
     line(issues.length === 0, `level data: all ${C.levels.length} levels (incl. Pecahan and Desimal) have the same fields, a music track (key/chords/melody), keys, colours and BPM for every difficulty${issues.length ? '<br>' + issues.join('<br>') : ''}`);
+  }
+
+  // ============================================================ difficulties: one BPM + score multiplier for all levels
+  {
+    const want = { easy: [60, 0.5], medium: [100, 1], hard: [120, 1.5] };
+    const bad = C.difficulties.filter((d) => !want[d.id] || d.bpm !== want[d.id][0] || d.scoreMult !== want[d.id][1]).map((d) => d.id);
+    line(bad.length === 0 && C.difficulties.length === 3, `difficulties: Mudah 60 BPM x0.5, Sedang 100 BPM x1, Susah 120 BPM x1.5 for every level${bad.length ? ' - wrong: ' + bad : ''}`);
+  }
+
+  // ============================================================ levels 1-5: all 3 choices end in the same digit
+  {
+    const bad = [];
+    let n = 0;
+    C.levels.forEach((L, li) => {
+      if (['frac', 'dec'].includes(L.type)) return;
+      for (let t = 0; t < 5; t++) for (let i = 0; i < 600; i++) {
+        const p = NA.makeProblem(li, t, 3);
+        n++;
+        const ends = new Set(p.options.map((o) => Number(o) % 10));
+        if (p.options.length !== 3 || ends.size !== 1 || p.options.some((o) => !(Number(o) >= 1))) bad.push(`${L.name}: ${p.text} → [${p.options.join(' | ')}]`);
+      }
+    });
+    line(bad.length === 0, `levels 1-5: ${n} problems, 3 positive choices that all end in the same digit${bad.length ? '<br>' + bad.slice(0, 4).join('<br>') : ''}`);
   }
 
   // ============================================================ every level x tier x lane count

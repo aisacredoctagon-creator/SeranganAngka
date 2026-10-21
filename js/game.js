@@ -26,7 +26,7 @@
   const isHit = (k) => k === 'perfect' || k === 'good' || k === 'early' || k === 'late';
 
   NA.laneCount = (levelIdx) => C.laneOverride || C.levels[levelIdx].lanes;
-  NA.bpmFor = (levelIdx, diffIdx) => C.difficulties[diffIdx].bpm[C.levels[levelIdx].bpmStage];
+  NA.bpmFor = (levelIdx, diffIdx) => C.difficulties[diffIdx].bpm;
 
   G.init = function () {
     el = {
@@ -66,8 +66,14 @@
     if (S) S.pxPerBeat = (LINE_Y - SPAWN_Y) / S.approach;
     return true;
   }
+  // The dashed lane lines scroll down at exactly the speed the problems fall (CSS animation, one dash period = 48 px).
+  function syncDash() {
+    if (!S) return;
+    el.field.style.setProperty('--dash-dur', `${(48 / (S.pxPerBeat / S.spb)).toFixed(3)}s`);
+  }
   G.relayout = function () {
     if (!layoutMetrics() || !S) return;
+    syncDash();
     S.notes.forEach((n) => { if (n.el && !n.removed) fitNote(n.el); });
     fitPads();
   };
@@ -129,7 +135,7 @@
     buildLaneUI(lanes);
     layoutMetrics();
     S = {
-      levelIdx, diffIdx, lanes, bpm, spb, stepMode,
+      levelIdx, diffIdx, lanes, bpm, spb, stepMode, scoreMult: C.difficulties[diffIdx].scoreMult,
       approach, approachSec: approach * spb, pxPerBeat: (LINE_Y - SPAWN_Y) / approach,
       interval: L.noteEveryBeats,
       notes: [], cur: 0, nextBeat: C.leadBeats, sinceBreath: 0,
@@ -147,6 +153,7 @@
     buildHearts();
     spawnDue(0);
     updateHud();
+    syncDash();
     A.start(bpm, levelIdx);
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -283,7 +290,7 @@
   }
 
   // ---- judging ---------------------------------------------------------------------
-  const LABELS = { perfect: 'PERFECT!', good: 'GOOD!', early: 'CEPAT!', late: 'LAMBAT!', wrong: 'MISS!', pass: 'MISS!' };
+  const LABELS = { perfect: 'SEMPURNA!', good: 'BAGUS!', early: 'CEPAT!', late: 'LAMBAT!', wrong: 'KEPELESET!', pass: 'KEPELESET!' };
   const TONES = { perfect: 'perfect', good: 'good', early: 'off', late: 'off', wrong: 'bad', pass: 'bad' };
 
   function judge(n, kind, picked) {
@@ -291,8 +298,9 @@
     n.judged = kind;
     S.cur++;
     const hit = isHit(kind);
+    let gained = 0;
     if (hit) {
-      const gained = C.points[kind] * mult(S.streak);
+      gained = Math.round(C.points[kind] * mult(S.streak) * S.scoreMult);        // combo multiplier x difficulty multiplier
       S.score += gained;
       S.correct++;
       S[kind]++;
@@ -304,7 +312,6 @@
         S.streak = 0;
       }
       A.correct(kind);   // the next melody note, snapped to the beat grid
-      floatText(`+${gained}`, TONES[kind]);
     } else {
       S.streak = 0;
       S.lives--;
@@ -320,7 +327,7 @@
       void el.field.offsetWidth;
       el.field.classList.add('shake');
     }
-    showJudge(LABELS[kind], TONES[kind]);
+    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind]);     // points + rating in one badge
     if (n.el) {
       n.el.classList.remove('current');
       n.el.classList.add(hit ? 'hit' : 'miss', `k-${kind}`);
@@ -344,14 +351,6 @@
     j.className = `judge ${tone}`;
     void j.offsetWidth;
     j.classList.add('show');
-  }
-
-  function floatText(text, tone) {
-    const f = document.createElement('div');
-    f.className = `fx-float ${tone}`;
-    f.textContent = text;
-    el.fx.appendChild(f);
-    setTimeout(() => f.remove(), 800);
   }
 
   function notice(msg) {
@@ -470,7 +469,7 @@
   function updateHud() {
     el.score.textContent = S.score.toLocaleString('en-US');
     const m = mult(S.streak);
-    el.label.textContent = `COMBO x${m}`;
+    el.label.innerHTML = `COMBO <b>X${m}</b>`;
     const filled = m >= C.maxMultiplier ? C.comboStep : S.streak % C.comboStep;
     [...el.dots.children].forEach((d, i) => d.classList.toggle('on', i < filled));
     [...el.lives.children].forEach((h, i) => {
