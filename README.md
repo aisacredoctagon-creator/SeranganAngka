@@ -32,7 +32,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
 - Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
 - **Sempurna** ±100 ms, **Bagus** ±250 ms, **Cepat/Lambat** ±400 ms (benar tapi kurang pas: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
-- **Kesulitan** (sama untuk semua level): Mudah = 60 BPM, poin ×0,5 · Sedang = 100 BPM, poin ×1 · Susah = 120 BPM, poin ×1,5. Pengali ini dikalikan dengan pengali combo.
+- **Kesulitan** (sama untuk semua level): Mudah = 80 BPM, poin ×0,5 · Sedang = 100 BPM, poin ×1 · Susah = 120 BPM, poin ×1,5. Pengali ini dikalikan dengan pengali combo.
 - Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
@@ -74,30 +74,29 @@ Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`. Mode gerak juga bisa dig
 - Tes: `http://localhost:8123/tests/problems-test.html` menghitung ulang jawaban setiap soal dengan aritmetika pecahan eksak dan memastikan tepat satu pilihan yang benar (49.000 soal, semua level).
 
 ## Sistem suara
-Tiga lapisan suara di mesin audio, dengan dua kontrol di layar (tombol bisu + slider volume; tombol "Suara" di menu utama dan layar Jeda). Slider **Efek** mengatur **Melodi dan Efek sekaligus**:
-- **Musik**: backing (drum, bass, harmoni) yang berjalan terus, mengikuti BPM game.
-- **Melodi**: dimainkan oleh pemain. Tiap jawaban benar = nada berikutnya dari melodi level itu, dikunci ke grid ketukan (`quantize`). Jawaban benar berturut-turut membentuk melodi utuh. Jawaban salah = satu nada di luar tangga nada (bergeser satu semitone dan sedikit fals), melodi **tidak** maju dan terbisukan sebentar. Soal yang terlewat tanpa dijawab = melodi terbisukan sebentar + bunyi "tuk" tanpa nada (bukan nada fals, karena bukan jawaban yang salah), melodi tidak maju.
-- **Efek**: klik menu dan jingle akhir level. (Satu slider "Efek" di layar mengendalikan lapisan Melodi dan Efek bersama-sama.)
+Tiga lapisan suara di mesin audio, dengan dua kontrol di layar (tombol bisu + slider volume; tombol "Suara" di menu utama dan layar Jeda). Slider **Efek** mengatur lapisan **nada** dan **efek** sekaligus:
+- **Musik**: lagu sungguhan di `assets/audio/` — **Mudah = 80 BPM, Sedang = 100 BPM, Susah = 120 BPM**. Semua level memakai lagu sesuai kesulitan yang dipilih.
+- **Nada**: jawaban benar = **satu nada pendek** (selalu nada yang sama, langsung bunyi). Jawaban salah = nada fals satu semitone di bawahnya. Soal yang terlewat = bunyi "tuk" tanpa nada dan nada yang sedang berdering dibungkam.
+- **Efek**: bunyi hover dan klik tombol di menu utama (tick pendek saat kursor masuk, "pop" saat klik, arpeggio naik untuk tombol Main!), klik menu, dan jingle akhir level.
+- **BGM menu utama**: loop synth sederhana (C – Am – F – G, 92 BPM: pad lembut, bass, arpeggio, ketukan tipis) yang berjalan di bawah slider **Musik**. Mulai setelah klik atau tombol pertama (browser memblokir suara otomatis sebelum itu), berhenti saat game dimulai, dan menyala lagi saat kembali ke menu.
 
-Data musik tiap level (kunci, chord, gaya backing, instrumen, urutan melodi) ada di `js/music.js`. Semua melodi memakai tangga nada pentatonik dari kunci levelnya, jadi nada mana pun terdengar serasi di atas chord mana pun, kapan pun pemain menekannya.
+Cara lagu dipasangkan ke game: jam ketukan game berjalan tepat di BPM kesulitan, sedangkan lagu hasil AI biasanya sedikit meleset dari BPM namanya. Karena itu tiap lagu di `js/music.js` (`songs`) punya `fileBpm` (tempo asli hasil ukur) dan `offsetSec` (posisi ketukan pertama di dalam file). Lagu diputar dengan perubahan kecepatan sangat kecil (BPM ÷ fileBpm, sekitar 1–2 %) supaya ketukannya jatuh persis di grid game, dan di-loop per birama penuh. Angka-angka itu diukur dengan `tests/beat-analyzer.html`; bila lagu terasa terlalu cepat/lambat dari soal yang jatuh, geser `offsetSec` (detik) di `js/music.js`.
 
 | Pengaturan di `js/music.js` | Arti |
 |---|---|
-| `quantize.gridBeats` | grid penguncian nada melodi (0.5 = nada seperdelapan) |
-| `quantize.lateToleranceMs` | menekan terlambat sampai sekian ms setelah grid: nada langsung bunyi; lebih lambat: menunggu grid berikutnya |
-| `compensateOutputLatency` | `false` (default): garis target mengikuti waktu audio terjadwal, melodi pas dengan backing bila ditekan saat soal menyentuh garis. `true`: garis mengikuti suara yang terdengar |
-| `wrong.*`, `duckBeats` | seberapa fals/keras nada salah, dan berapa lama melodi dibisukan |
-| `tracks[n].melody` | urutan nada: `"E5 G5:3 A5"` (nada[:durasi dalam beat]) |
+| `songs[bpm]` | `src` (file mp3), `fileBpm` (tempo asli lagu), `offsetSec` (ketukan pertama di file) |
+| `correct` | nada tunggal jawaban benar: `midi` (84 = C6), `inst` (`bell`, `marimba`, `glass`, `pluck`), `sec` |
+| `compensateOutputLatency` | `false` (default): garis target mengikuti waktu audio terjadwal. `true`: garis mengikuti suara yang terdengar |
+| `wrong.*`, `duckBeats` | seberapa fals/keras nada salah, dan berapa lama nada dibungkam setelah kesalahan |
+| `tracks[n]` | `style` + `chords` backing sintesis cadangan, dipakai hanya bila lagu gagal dimuat |
+
+Lagu (3,3–3,6 MB tiap file) dimuat saat tombol **Main** ditekan (atau lebih awal, saat kesulitan dipilih); selama itu tombol menampilkan "Memuat musik…". Bila gagal dimuat dalam 15 detik, game jalan dengan backing sintesis.
 
 ### Uji audio otomatis
-Buka `http://localhost:8123/tests/audio-test.html` (setelah `node serve.js`). Halaman ini me-render musiknya secara offline lalu menganalisis sampel audionya: ketepatan grid dan nada melodi untuk ke-7 level, nada salah selalu di luar kunci dan tidak memajukan melodi, melodi dibisukan setelah kesalahan, seluruh bunyi backing mulai tepat di grid, dan tidak ada clipping.
+Buka `http://localhost:8123/tests/audio-test.html` (setelah `node serve.js`). Halaman ini me-render bunyinya secara offline lalu menganalisis sampel audionya: jawaban benar selalu satu nada yang sama dan tepat di waktunya, nada salah satu semitone di bawahnya, nada dibungkam setelah soal terlewat, backing sintesis cadangan tepat di grid dan tanpa clipping, serta ketiga lagu terdaftar dan filenya ada.
 
-### Memasang backing dari ElevenLabs (atau sumber audio lain)
-Connector ElevenLabs yang terpasang di sesi pembuatan hanya mendukung suara/ucapan, bukan musik. Langkah:
-1. Pasang connector ElevenLabs lengkap: Settings → Connectors → Add custom connector → `https://api.elevenlabs.io/v1/mcp`.
-2. Minta backing instrumental **tanpa melodi/vokal**, loop 8 birama 4/4, kunci dan chord sesuai `js/music.js`, untuk tiap level dan BPM yang dipakai (21 file: tiap level di 60, 100, dan 120 BPM).
-3. Simpan di `assets/audio/` dan daftarkan di `tracks[n].files` (lihat `assets/audio/README.md`). Pastikan tempo file tepat; musik hasil AI sering sedikit meleset, jadi cek dan, bila perlu, stretch ke BPM persis dan potong tepat di birama.
-4. Jalankan lewat `node serve.js` (bukan `file://`). Bila file gagal dimuat, game otomatis kembali ke backing sintesis.
+### Mengganti lagu
+Taruh file mp3 baru di `assets/audio/`, ukur tempo dan ketukan pertamanya dengan `tests/beat-analyzer.html` (isi daftar nama file di bagian atas skripnya), lalu perbarui `src`, `fileBpm`, dan `offsetSec` di `js/music.js`. Game harus dibuka lewat server (`node serve.js`), bukan `file://`.
 
 ## Tampilan
 UI mengikuti desain Figma "Alat Peraga Digital" bagian "Pop Play" (latar krem, outline tebal gelap, bayangan datar, aksen oranye). Semua token (warna, font, radius, outline, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Rubik (angka, judul) dan Fredoka One (tombol, nama level) dari Google Fonts. Badge penilaian menampilkan poin + penilaian, mis. "+100 SEMPURNA!".

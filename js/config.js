@@ -93,7 +93,7 @@ NA.CONFIG = {
   // ===================== TEMPO ==============================================
   // The same for EVERY level: bpm = tempo, scoreMult = multiplier on all points (on top of the combo multiplier).
   difficulties: [
-    { id: 'easy',   label: 'Mudah',  bpm: 60,  scoreMult: 0.5 },
+    { id: 'easy',   label: 'Mudah',  bpm: 80,  scoreMult: 0.5 },
     { id: 'medium', label: 'Sedang', bpm: 100, scoreMult: 1 },
     { id: 'hard',   label: 'Susah',  bpm: 120, scoreMult: 1.5 },
   ],

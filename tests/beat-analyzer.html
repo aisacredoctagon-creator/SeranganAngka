@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Beat analyzer</title>
+<!--
+  Dev tool (open via node serve.js): measures the REAL tempo and the first-beat position of each song in assets/audio, so
+  js/music.js (songs[bpm].fileBpm / offsetSec) can put the song on the game's beat grid.
+  For every song it scans tempos within -6 % .. +8 % of its label, scores how well onsets line up on a beat grid, and prints
+  the best tempo + phase (= offsetSec, in seconds). The per-20s phases at the refined tempo should all agree: if they do not,
+  the song drifts and the estimate is unreliable. Edit SONGS below to analyse other files.
+-->
+<pre id="o">running...</pre>
+<script>
+const SONGS = [80, 100, 120];                      // file name = assets/audio/<n>bpm.mp3
+(async () => {
+  const out = [];
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const HOP = 0.005;
+  for (const bpm of SONGS) {
+    const buf = await ctx.decodeAudioData(await (await fetch(`../assets/audio/${bpm}bpm.mp3`)).arrayBuffer());
+    const sr = buf.sampleRate, a = buf.getChannelData(0), b = buf.numberOfChannels > 1 ? buf.getChannelData(1) : a;
+    const hop = Math.round(sr * HOP), n = Math.floor(a.length / hop);
+    // 3-band-ish flux: low (one-pole lowpass ~150 Hz), mid/high (the remainder), half-wave rectified log-energy difference
+    const low = new Float32Array(n), high = new Float32Array(n);
+    let lp = 0; const k = 1 - Math.exp(-2 * Math.PI * 150 / sr);
+    for (let i = 0; i < n; i++) { let sl = 0, sh = 0; for (let j = 0; j < hop; j++) { const idx = i * hop + j, v = (a[idx] + b[idx]) / 2; lp += k * (v - lp); sl += lp * lp; const h = v - lp; sh += h * h; } low[i] = Math.log(1e-6 + sl / hop); high[i] = Math.log(1e-6 + sh / hop); }
+    const flux = new Float32Array(n);
+    for (let i = 1; i < n; i++) flux[i] = Math.max(0, low[i] - low[i - 1]) + 0.6 * Math.max(0, high[i] - high[i - 1]);
+    // normalise by local mean
+    const env = new Float32Array(n); const W = 100; let acc = 0;
+    for (let i = 0; i < n; i++) { acc += flux[i]; if (i >= W) acc -= flux[i - W]; env[i] = Math.max(0, flux[i] - acc / Math.min(i + 1, W) * 1.0); }
+    const comb = (bp, ph, from, to) => { const sp = 60 / bp; let s = 0, c = 0; for (let t = from + (((ph - from) % sp) + sp) % sp; t < to; t += sp) { const i = Math.round(t / HOP); s += env[i - 1] * .5 + env[i] + env[i + 1] * .5; c++; } return c ? s / c : 0; };
+    const bestPhase = (bp, from, to) => { const sp = 60 / bp; let bs = -1, bph = 0; for (let p = 0; p < sp; p += HOP) { const s = comb(bp, p, from, to); if (s > bs) { bs = s; bph = p; } } return [bph, bs]; };
+    // tempo scan 0.93..1.07
+    const cand = [];
+    for (let bp = bpm * 0.94; bp <= bpm * 1.08; bp += 0.04) { const [ph, s] = bestPhase(bp, 0, buf.duration); cand.push({ bp, ph, s }); }
+    cand.sort((x, y) => y.s - x.s); const peaks = []; for (const c of cand) { if (peaks.every((p) => Math.abs(p.bp - c.bp) > 0.6)) peaks.push(c); if (peaks.length >= 6) break; }
+    const top = peaks[0]; let fine = top; for (let bp = top.bp - 0.6; bp <= top.bp + 0.6; bp += 0.005) { const [ph, sc] = bestPhase(bp, 0, buf.duration); if (sc > fine.s) fine = { bp, ph, s: sc }; }
+    const fsp = 60 / fine.bp; const fsegs = []; for (let s0 = 0; s0 + 20 <= buf.duration; s0 += 20) { const [ph, sc] = bestPhase(fine.bp, s0, s0 + 20); fsegs.push(ph.toFixed(3) + '(' + sc.toFixed(2) + ')'); }
+    const mk = (arr) => { const o = new Float32Array(n); let ac = 0; for (let i = 1; i < n; i++) { const f = Math.max(0, arr[i] - arr[i - 1]); ac += f; if (i > W) ac -= Math.max(0, arr[i - W] - arr[i - W - 1]); o[i] = Math.max(0, f - ac / Math.min(i, W)); } return o; };
+    const eL = mk(low), eH = mk(high); const cmb = (E, bp, ph, from, to) => { const sp = 60 / bp; let sc = 0, c = 0; for (let t = from + (((ph - from) % sp) + sp) % sp; t < to; t += sp) { const i = Math.round(t / HOP); sc += E[i - 1] * .5 + E[i] + E[i + 1] * .5; c++; } return c ? sc / c : 0; };
+    const quarters = [0, 0.25, 0.5, 0.75].map((q) => { const ph = fine.ph + q * fsp; return q + ':L' + cmb(eL, fine.bp, ph, 0, 60).toFixed(2) + '/H' + cmb(eH, fine.bp, ph, 0, 60).toFixed(2); }).join('  ');
+    const nominal = bestPhase(bpm, 0, buf.duration);
+    const spb = 60 / bpm;
+    const segs = []; for (let s0 = 0; s0 + 20 <= buf.duration; s0 += 20) { const [ph, sc] = bestPhase(bpm, s0, s0 + 20); segs.push(`${s0}s:${ph.toFixed(3)}(${sc.toFixed(2)})`); }
+    out.push(`${bpm} file: ${buf.duration.toFixed(2)}s\n  nominal ${bpm}: phase ${nominal[0].toFixed(3)}s (${(nominal[0] / spb).toFixed(2)} beat) score ${nominal[1].toFixed(3)}\n  best tempos: ${peaks.map((c) => c.bp.toFixed(2) + ' bpm @' + c.ph.toFixed(3) + ' s=' + c.s.toFixed(3)).join('  |  ')}\n  nominal per-20s phase (score): ${segs.join(' ')}
+  REFINED tempo ${fine.bp.toFixed(3)} bpm (spb ${fsp.toFixed(4)}), phase ${fine.ph.toFixed(3)}, score ${fine.s.toFixed(3)}; quarter-beat energy (first 60s): ${quarters}; per-20s phases at refined tempo: ${fsegs.join(' ')}`);
+  }
+  document.getElementById('o').textContent = out.join('\n\n');
+  document.title = 'analysis done';
+})().catch((e) => { document.getElementById('o').textContent = 'ERR ' + e + e.stack; });
+</script>

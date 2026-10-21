@@ -1,10 +1,9 @@
 /*
  * Web Audio engine. Three separate layers, each with its own volume + mute:
- *   music  - backing (drums, bass, harmony), always playing, scheduled ahead on the audio clock
- *   melody - the tune the PLAYER plays: each correct answer = next melody note (snapped to the beat
- *            grid); each wrong answer = an out-of-key note that does not advance the tune
+ *   music  - the backing song (assets/audio, one per tempo); a built-in synth backing is the fallback
+ *   melody - the single note a correct answer plays, and the flat note of a wrong answer
  *   sfx    - menu click and the end-of-level jingles
- * Data (keys, chords, melodies) lives in js/music.js.
+ * Data (songs, notes, fallback chords) lives in js/music.js.
  *
  * The audio clock (ctx.currentTime) drives game timing. If the browser leaves the AudioContext
  * suspended/blocked the game falls back to the system clock instead of freezing (and is silent).
@@ -21,10 +20,10 @@
 
   let spb = 1, startAt = 0, nextStep = 0, timer = null;
   let T = null;                                     // the current track, parsed
-  let melodyIdx = 0, lastVoice = null, fileSrc = null;
+  let lastVoice = null, fileSrc = null;
   let fallback = false, perfStart = 0, ctxStart = 0, pausedMs = 0, pauseAt = 0;
   const cache = {};                                 // audio-file url -> AudioBuffer
-  A.debug = { log: [] };                            // last melody events (used by tests)
+  A.debug = { log: [] };                            // last note events (used by tests)
 
   // ---------------------------------------------------------------- context & buses
   function build() {
@@ -38,7 +37,7 @@
       bus[ch].connect(master);
       applyBus(ch, true);
     });
-    duck = ctx.createGain();                        // sits in front of the melody bus: used to mute the tune briefly
+    duck = ctx.createGain();                        // sits in front of the note bus: used to silence the ringing note briefly
     duck.connect(bus.melody);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -140,17 +139,6 @@
     if (!m) throw new Error(`NA.MUSIC: bad key "${s}"`);
     return (PC[m[1]] + acc(m[2]) + 12) % 12;
   };
-  function noteMidi(s) {
-    const m = /^([A-G])([#b]?)(-?\d)$/.exec(s);
-    if (!m) throw new Error(`NA.MUSIC: bad note "${s}"`);
-    return 12 * (+m[3] + 1) + PC[m[1]] + acc(m[2]);
-  }
-  function parseMelody(str, defBeats) {
-    return str.trim().split(/\s+/).map((tok) => {
-      const [n, d] = tok.split(':');
-      return { midi: noteMidi(n), beats: d ? parseFloat(d) : defBeats };
-    });
-  }
   const QUAL = { '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], dim: [0, 3, 6] };
   function parseChord(name) {
     const m = /^([A-G][#b]?)(m|7|maj7|dim)?$/.exec(name);
@@ -158,7 +146,6 @@
     const pc = pcOf(m[1]);
     return { pc, tones: QUAL[m[2] || ''], bass: 40 + ((pc - 4 + 12) % 12), voice: 60 + (((pc + 6) % 12) - 6) };
   }
-  const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10] };
 
   // Backing patterns: 8 steps per bar (eighth notes). bass: step -> [semitones above root, beats]. stabs: step -> beats.
   const STYLES = {
@@ -174,7 +161,7 @@
              bass: { 0: [0, .45], 1: [0, .4], 2: [0, .45], 3: [0, .4], 4: [0, .45], 5: [0, .4], 6: [7, .45], 7: [0, .4] }, stabs: { 0: 1.8 } },
   };
 
-  // Melody instruments: layered partials. ratio = frequency multiple, dec = ring time in seconds.
+  // Note instruments: layered partials. ratio = frequency multiple, dec = ring time in seconds.
   const INST = {
     bell:    [{ type: 'sine', ratio: 1, gain: .5, atk: .003, dec: 1.4 }, { type: 'sine', ratio: 2.76, gain: .14, atk: .002, dec: .5 }, { type: 'sine', ratio: 5.4, gain: .05, atk: .002, dec: .25 }],
     marimba: [{ type: 'sine', ratio: 1, gain: .55, atk: .002, dec: .7 }, { type: 'sine', ratio: 4, gain: .18, atk: .001, dec: .12 }, { type: 'triangle', ratio: .5, gain: .12, atk: .002, dec: .4 }],
@@ -184,16 +171,10 @@
 
   function buildTrack(idx) {
     const d = M.tracks[((idx % M.tracks.length) + M.tracks.length) % M.tracks.length];
-    const keyPc = pcOf(d.key);
     return {
-      d, name: d.name, key: d.key,
+      d, name: d.name, key: d.key, keyPc: pcOf(d.key),
       style: STYLES[d.style] || STYLES.pop,
-      inst: INST[d.lead] || INST.bell,
       chords: d.chords.map(parseChord),
-      melody: parseMelody(d.melody, d.noteBeats || 2),
-      keyPcs: new Set(SCALES[d.mode || 'major'].map((i) => (keyPc + i) % 12)),
-      keyPc,
-      files: d.files || {},
     };
   }
 
@@ -209,9 +190,10 @@
   }
   function hat(t, v) { noise(t, { type: 'highpass', freq: 7500, dur: 0.045, gain: v }); }
 
-  function scheduleStep(step, t) {
+  function scheduleStep(step, t, tickOnly) {
     const st = T.style;
     const s = step % 8;
+    if (tickOnly) { if (s % 2 === 0 && mute.music) tone(1100, t, { type: 'sine', dur: 0.03, gain: 0.05, bus: bus.sfx }); return; }   // song playing: only the quiet tick (when muted)
     const ch = T.chords[Math.floor(step / 8) % T.chords.length];
     if (st.kick[s]) kick(t);
     if (st.snare[s]) (st.clap ? clap(t) : snare(t));
@@ -225,39 +207,43 @@
   }
 
   function pump() {
-    if (!ctx || fallback || fileSrc) return;        // (a real audio file replaces the synth backing)
+    if (!ctx || fallback) return;
     let guard = 0;                                   // never schedule a flood if the clock ever jumps
     while (guard++ < 32 && startAt + (nextStep * spb) / 2 < ctx.currentTime + 0.12) {
-      scheduleStep(nextStep, startAt + (nextStep * spb) / 2);
+      scheduleStep(nextStep, startAt + (nextStep * spb) / 2, !!fileSrc);       // (a loaded song replaces the synth backing)
       nextStep++;
     }
   }
 
-  // Optional: real audio backing (e.g. generated with ElevenLabs), keyed by exact BPM in music.js.
-  A.prepare = async function (level, bpm) {
+  // Loads the song for this tempo (decoded once, kept until another tempo is asked for: a decoded song is ~50 MB).
+  A.prepare = async function (_level, bpm) {
     if (!A.init()) return;
-    const d = M.tracks[level];
-    const spec = d && d.files && d.files[bpm];
+    const spec = M.songs && M.songs[bpm];
     if (!spec || cache[spec.src]) return;
     try {
       const res = await fetch(spec.src);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      cache[spec.src] = await ctx.decodeAudioData(await res.arrayBuffer());
+      const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+      Object.keys(cache).forEach((k) => delete cache[k]);
+      cache[spec.src] = buf;
     } catch (e) {
       console.warn(`[audio] could not load ${spec.src} - using the synth backing instead.`, e);
     }
   };
+  // The song starts at its first beat (offsetSec) on game beat 0. It is played at BPM / fileBpm speed so that its real
+  // beats fall exactly on the game's beat grid, and loops over whole bars.
   function startFile(bpm) {
     fileSrc = null;
-    const spec = T.files[bpm];
+    const spec = M.songs && M.songs[bpm];
     const buf = spec && cache[spec.src];
     if (!buf) return;
+    const fileSpb = 60 / (spec.fileBpm || bpm), off = spec.offsetSec || 0;
     const src = ctx.createBufferSource();
-    const off = spec.offsetSec || 0;
     src.buffer = buf;
+    src.playbackRate.value = bpm / (spec.fileBpm || bpm);
     src.loop = true;
     src.loopStart = off;
-    src.loopEnd = off + spec.loopBeats * spb;
+    src.loopEnd = off + Math.max(4, Math.floor((buf.duration - off) / fileSpb / 4) * 4) * fileSpb;
     src.connect(bus.music);
     src.start(startAt, off);
     fileSrc = src;
@@ -273,7 +259,6 @@
     ctxStart = ctx ? ctx.currentTime : 0;
     startAt = ctxStart + 0.2;
     nextStep = 0;
-    melodyIdx = 0;
     lastVoice = null;
     A.debug.log.length = 0;
     if (duck) duck.gain.value = 1;
@@ -317,16 +302,7 @@
   };
   A.beatSeconds = () => spb;
 
-  // ---------------------------------------------------------------- melody layer
-  // First grid point at or after (now - lateTolerance), in audio-clock time. Never earlier than "now".
-  function snap(now) {
-    const q = M.quantize;
-    const grid = q.gridBeats * spb;
-    const heard = now - startAt - latency();                       // where the player is on the beat grid
-    const k = Math.max(0, Math.ceil((heard - q.lateToleranceMs / 1000) / grid - 1e-9));
-    return { t: Math.max(startAt + k * grid, now + 0.003), k };
-  }
-
+  // ---------------------------------------------------------------- note layer
   function cutVoice(t) {
     if (lastVoice) {
       lastVoice.rel.gain.cancelScheduledValues(t);
@@ -334,34 +310,25 @@
       lastVoice = null;
     }
   }
-  function duckMelody(t, sec) {
+  function duckNote(t, sec) {
     duck.gain.cancelScheduledValues(t);
     duck.gain.setTargetAtTime(0.06, t, 0.01);
     duck.gain.setTargetAtTime(1, t + sec, 0.12);
   }
 
-  function playLead(midi, t, durSec, level, sparkle) {
+  function playNote(midi, t, durSec, level, sparkle, inst) {
     const f = mtof(midi);
     const rel = ctx.createGain();
     rel.connect(duck);
     const cap = Math.max(0.4, durSec + 0.3);
-    T.inst.forEach((p) => {
+    inst.forEach((p) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = p.type;
       osc.frequency.value = f * p.ratio;
       const dec = Math.min(p.dec, cap);
       env(g, t, p.atk, p.gain * level, dec);
-      let node = osc;
-      if (p.lp) {
-        const lp = ctx.createBiquadFilter();
-        lp.type = 'lowpass';
-        lp.frequency.setValueAtTime(p.lp, t);
-        lp.frequency.exponentialRampToValueAtTime(p.lpTo, t + dec);
-        osc.connect(lp);
-        node = lp;
-      }
-      node.connect(g);
+      osc.connect(g);
       g.connect(rel);
       osc.start(t);
       osc.stop(t + p.atk + dec + 0.05);
@@ -377,30 +344,27 @@
     return { rel };
   }
 
-  // Right answer = the next note of this level's melody, snapped to the beat grid.
+  // Right answer = ONE short note, played at once (the same note every time).
   A.correct = function (grade, _streak, now) {
     if (!ctx || fallback || !T) return;
     now = now === undefined ? ctx.currentTime : now;
-    const n = T.melody[melodyIdx % T.melody.length];
-    melodyIdx++;
-    const s = snap(now);
-    cutVoice(s.t);
+    const t = now + 0.003;
+    const c = M.correct;
     const level = { perfect: 1, good: 0.85, early: 0.65, late: 0.65 }[grade] || 0.85;
-    lastVoice = playLead(n.midi, s.t, n.beats * spb, level, grade === 'perfect');
-    A.debug.log.push({ kind: 'melody', idx: melodyIdx - 1, midi: n.midi, now, at: s.t, grid: s.k, grade });
+    cutVoice(t);
+    lastVoice = playNote(c.midi, t, c.sec, level, grade === 'perfect', INST[c.inst] || INST.bell);
+    A.debug.log.push({ kind: 'correct', midi: c.midi, now, at: t, grade });
     if (A.debug.log.length > 300) A.debug.log.shift();
   };
 
-  // Wrong answer = a note a semitone outside the key (and pulled out of tune); the melody does not advance.
+  // Wrong answer = a note a semitone below the correct one, pulled out of tune and sagging flat.
   A.wrong = function (now) {
     if (!ctx || fallback || !T) return;
     now = now === undefined ? ctx.currentTime : now;
-    const next = T.melody[melodyIdx % T.melody.length].midi;       // the note they should have played
-    const out = [next + 1, next - 1].filter((m) => !T.keyPcs.has(((m % 12) + 12) % 12));
-    const midi = out.length ? out[Math.random() < 0.5 ? 0 : out.length - 1] : next + 1;
-    const t = M.wrong.immediate ? now + 0.003 : snap(now).t;
+    const midi = M.correct.midi - 1;
+    const t = now + 0.003;
     cutVoice(t);
-    duckMelody(t, M.duckBeats.wrong * spb);
+    duckNote(t, M.duckBeats.wrong * spb);
     const f = mtof(midi);
     const c = M.wrong.detuneCents * (Math.random() < 0.5 ? -1 : 1);
     const cents = (x) => Math.pow(2, x / 1200);
@@ -423,20 +387,88 @@
     A.debug.log.push({ kind: 'wrong', midi, cents: c, now, at: t });
   };
 
-  // Problem slipped past unanswered: the melody drops out for a moment and a soft, un-pitched thud plays.
-  // (It is a missed chance, not a wrong note, so it does not clash with the key and does not advance the tune.)
+  // Problem slipped past unanswered: the ringing note drops out and a soft, un-pitched thud plays.
+  // (It is a missed chance, not a wrong answer, so it has no pitch.)
   A.miss = function (now) {
     if (!ctx || fallback || !T) return;
     now = now === undefined ? ctx.currentTime : now;
     const t = now + 0.003;
     cutVoice(t);
-    duckMelody(t, M.duckBeats.miss * spb);
+    duckNote(t, M.duckBeats.miss * spb);
     tone(120, t, { type: 'sine', slideTo: 60, dur: 0.2, gain: 0.3 });
     noise(t, { type: 'lowpass', freq: 500, dur: 0.1, gain: 0.18, bus: bus.sfx });
     A.debug.log.push({ kind: 'miss', now, at: t });
   };
 
+  // ---------------------------------------------------------------- main-menu BGM (a small synth loop, no file)
+  // C - Am - F - G, 92 BPM: soft pad, bass, a gentle plucked arpeggio and a very light beat. It plays only in the menu,
+  // on its own gain node (so it can be faded out) feeding the Musik bus.
+  const MENU_BPM = 92, MENU_CHORDS = ['C', 'Am', 'F', 'G'];
+  const MENU_ARP = [1, 1, 1, 0, 1, 1, 1, 1], MENU_ARP_IDX = [0, 1, 2, 1, 2, 1, 0, 1];
+  let menuTimer = null, menuBus = null, menuStartAt = 0, menuNext = 0, menuChords = null;
+  const menuEighth = 60 / MENU_BPM / 2;
+  function menuStep(step, t) {
+    const s = step % 8, ch = menuChords[Math.floor(step / 8) % menuChords.length], out = { bus: menuBus };
+    if (s === 0) ch.tones.forEach((tn) => tone(mtof(ch.voice + tn), t, Object.assign({ type: 'sine', attack: 0.35, dur: 8 * menuEighth, gain: 0.05 }, out)));
+    if (s === 0 || s === 4) {
+      tone(mtof(ch.bass + (s ? 7 : 0)), t, Object.assign({ type: 'triangle', dur: 1.8 * menuEighth, gain: 0.2, lp: 700 }, out));
+      tone(110, t, Object.assign({ type: 'sine', slideTo: 45, dur: 0.16, gain: 0.26 }, out));
+    }
+    if (MENU_ARP[s]) tone(mtof(ch.voice + 12 + ch.tones[MENU_ARP_IDX[s] % ch.tones.length]), t, Object.assign({ type: 'triangle', dur: 0.32, gain: 0.06, lp: 3000, lpTo: 900 }, out));
+    if (s % 2 === 1) noise(t, { type: 'highpass', freq: 8000, dur: 0.03, gain: 0.018, bus: menuBus });
+    if (s === 2 || s === 6) noise(t, { type: 'bandpass', freq: 2000, dur: 0.08, gain: 0.04, bus: menuBus });
+  }
+  function menuPump(until) {
+    let guard = 0;
+    while (guard++ < 64 && menuStartAt + menuNext * menuEighth < until) { menuStep(menuNext, menuStartAt + menuNext * menuEighth); menuNext++; }
+  }
+  function menuBegin() {
+    menuChords = MENU_CHORDS.map(parseChord);
+    menuBus = ctx.createGain();
+    menuBus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    menuBus.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.6);          // fade in
+    menuBus.connect(bus.music);
+    menuStartAt = ctx.currentTime + 0.1;
+    menuNext = 0;
+  }
+  // true = (re)start the loop if the audio is running, false = fade it out. Safe to call repeatedly.
+  A.menuMusic = function (on) {
+    if (!on) {
+      if (menuTimer) clearInterval(menuTimer);
+      menuTimer = null;
+      if (menuBus && ctx) {
+        const g = menuBus;
+        g.gain.cancelScheduledValues(ctx.currentTime);
+        g.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
+        setTimeout(() => { try { g.disconnect(); } catch (e) { /* gone */ } }, 900);
+      }
+      menuBus = null;
+      return;
+    }
+    if (menuTimer || !ctx || ctx.state !== 'running') return;
+    menuBegin();
+    menuPump(ctx.currentTime + 0.2);
+    menuTimer = setInterval(() => { if (ctx) menuPump(ctx.currentTime + 0.2); }, 50);
+  };
+  A.menuPlaying = () => !!menuTimer;
+
   // ---------------------------------------------------------------- jingles & UI
+  // Menu button sounds: silent until the audio is running (a hover is not a user gesture, so it must not wake the audio).
+  let uiForce = false;                                  // tests: an offline context never reports 'running'
+  const uiOK = () => !!ctx && (uiForce || ctx.state === 'running');
+  A.uiHover = function () { if (uiOK()) tone(1568 * (1 + Math.random() * 0.03), ctx.currentTime, { type: 'sine', dur: 0.05, gain: 0.05 }); };
+  A.uiClick = function () {
+    if (!uiOK()) return;
+    const t = ctx.currentTime;
+    tone(660, t, { type: 'triangle', slideTo: 990, dur: 0.09, gain: 0.14 });
+    tone(1320, t + 0.045, { type: 'sine', dur: 0.1, gain: 0.07 });
+  };
+  A.uiStart = function () {                                                    // the big "Main!" button: a short rising run
+    if (!uiOK()) return;
+    const t = ctx.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.07, { type: 'triangle', dur: 0.2, gain: 0.12 }));
+  };
+
   function arp(semis, step, dur, gain, type) {
     if (!ctx) return;
     const root = 60 + (T ? T.keyPc : 0);
@@ -455,8 +487,11 @@
       while (startAt + (nextStep * spb) / 2 < untilSec) { scheduleStep(nextStep, startAt + (nextStep * spb) / 2); nextStep++; }
     },
     info: () => ({ spb, startAt, track: T }),
+    menu(untilSec) { menuBegin(); menuStartAt = 0.1; menuNext = 0; menuPump(untilSec); },     // schedule the menu loop offline
+    menuEighth: () => menuEighth,
+    ui: () => { uiForce = true; return { hover: A.uiHover, click: A.uiClick, start: A.uiStart }; },
     usingFile: () => !!fileSrc,
     gains: () => ({ music: bus.music.gain.value, melody: bus.melody.gain.value, sfx: bus.sfx.gain.value }),
-    parse: { noteMidi, parseMelody, parseChord, pcOf },
+    parse: { parseChord, pcOf },
   };
 })();

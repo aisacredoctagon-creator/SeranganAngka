@@ -86,6 +86,7 @@
     el.pads.innerHTML = '';
     el.guides.innerHTML = '';
     el.pads.style.setProperty('--lanes', n);
+    el.notes.style.setProperty('--lanes', n);
     el.guides.style.setProperty('--lanes', n);
     for (let i = 0; i < n; i++) {
       const pad = document.createElement('button');
@@ -183,6 +184,7 @@
     S.lastText = p.text;
     const note = {
       i: S.notes.length, problem: p, judged: null, el: null, removed: false,
+      lane: rand(0, S.lanes - 1),                                  // the problem falls down a random lane (the answer keys stay A / W / D)
       target: S.nextBeat * S.spb,
     };
     S.notes.push(note);
@@ -271,7 +273,12 @@
     box.style.setProperty('--fit', w > room && w > 0 ? Math.max(minRatio, room / w).toFixed(3) : 1);
     box.style.fontWeight = w0;
   }
-  const fitNote = (d) => fitText(d.firstChild, d.firstChild.firstChild, 0.55, 24);
+  // A problem has to fit inside its lane (so it sits centred between the lane lines, also in the first / last lane).
+  function fitNote(d) {
+    const box = d.firstChild, cs = getComputedStyle(box);
+    const sides = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2 * parseFloat(cs.borderLeftWidth);
+    fitText(box, box.firstChild, 0.45, sides, Math.max(60, el.field.clientWidth / S.lanes - 6));
+  }
   function fitPads() {
     [...el.pads.children].forEach((pad) => {
       const a = pad.querySelector('.pad-answer');
@@ -282,7 +289,8 @@
   function createNote(n) {
     const d = document.createElement('div');
     const text = n.problem.text;
-    d.className = 'note' + (NA.fmt.hasFraction(text) ? ' tall' : '');         // stacked fractions need more height
+    d.className = 'note' + (NA.fmt.hasFraction(text) ? ' tall' : '');
+    d.style.setProperty('--lane', n.lane);         // stacked fractions need more height
     d.innerHTML = `<div class="note-body" aria-label="${NA.fmt.plain(text)}"><span class="nb">${NA.fmt.html(text)}</span></div>`;
     el.notes.appendChild(d);
     n.el = d;
@@ -327,7 +335,7 @@
       void el.field.offsetWidth;
       el.field.classList.add('shake');
     }
-    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind]);     // points + rating in one badge
+    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind], n.lane);     // points + rating in one badge
     if (n.el) {
       n.el.classList.remove('current');
       n.el.classList.add(hit ? 'hit' : 'miss', `k-${kind}`);
@@ -345,8 +353,9 @@
     refreshPads();
   }
 
-  function showJudge(text, tone) {
+  function showJudge(text, tone, lane) {
     const j = el.judge;
+    j.style.setProperty('--jx', `${(((lane === undefined ? (S.lanes - 1) / 2 : lane) + 0.5) / S.lanes * 100).toFixed(2)}%`);      // the badge sits above the lane the problem fell in
     j.textContent = text;
     j.className = `judge ${tone}`;
     void j.offsetWidth;
@@ -452,6 +461,7 @@
       void a.offsetWidth;
       a.classList.add('swap');
     });
+    el.pads.classList.toggle('frac', note.problem.options.some((o) => NA.fmt.hasFraction(o)));   // stacked fractions need the whole card: no key badge
     fitPads();
   }
 

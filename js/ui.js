@@ -69,10 +69,34 @@
     $('overlay-pause').classList.remove('open');
     $('countdown').classList.remove('open');
     $('screen-game').classList.remove('paused');
-    if (name === 'menu') { renderMenu(); }
+    if (name === 'menu') { renderMenu(); startMenuMusic(); } else A.menuMusic(false);
   }
 
   // ---- Menu -------------------------------------------------------------------
+  // The menu BGM starts as soon as the browser lets audio run (first click / key press) and stops when a game starts.
+  let launching = false;
+  function startMenuMusic() {
+    if (launching) return;
+    A.ready(1500).then((ok) => { if (ok && !launching && $('screen-menu').classList.contains('active')) A.menuMusic(true); });
+  }
+  // hover + click sounds for every button in the menu (hover only for a real pointer, not for touch)
+  {
+    const menu = $('screen-menu');
+    let hovered = null;
+    menu.addEventListener('pointerover', (e) => {
+      const b = e.pointerType === 'touch' ? null : e.target.closest('button');
+      if (b === hovered) return;
+      hovered = b;
+      if (b && !b.disabled) A.uiHover();
+    });
+    menu.addEventListener('pointerleave', () => { hovered = null; });
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || b.disabled) return;
+      if (b.id === 'btn-play') A.uiStart(); else A.uiClick();
+    });
+  }
+
   function renderMenu() {
     $('hs-value').textContent = highScore().toLocaleString('en-US');
     renderLevels();
@@ -132,7 +156,7 @@
       b.className = 'diff-btn' + (i === save.diff ? ' selected' : '');
       b.setAttribute('aria-pressed', String(i === save.diff));
       b.textContent = d.label;
-      b.addEventListener('click', () => { save.diff = i; persist(); renderDiffs(); });
+      b.addEventListener('click', () => { save.diff = i; persist(); renderDiffs(); A.prepare(save.level, NA.bpmFor(save.level, i)); });   // start loading that song already
       box.appendChild(b);
     });
   }
@@ -198,19 +222,22 @@
   window.addEventListener('keydown', (e) => { if (e.code === 'Escape') setPop(false); });
 
   // Optional audio files (see js/music.js) are loaded first; with the built-in synth this returns at once.
-  let launching = false;
   async function launch(level, diff) {
     if (launching) return;
     launching = true;
+    A.menuMusic(false);
     try {
       A.init();                                       // inside the click, so the browser allows audio
       const btn = $('btn-play');
-      btn.disabled = true;                            // (brief) while the audio device wakes up
+      const label = btn.innerHTML;
+      btn.disabled = true;                            // while the audio device wakes up and the song loads
+      btn.textContent = 'Memuat musik…';
       // Start the game only when the audio clock is really running, so beat and visuals begin together.
       await Promise.race([
         Promise.all([A.prepare(level, NA.bpmFor(level, diff)), A.ready(3000)]),
-        new Promise((r) => setTimeout(r, 5000)),
+        new Promise((r) => setTimeout(r, 15000)),     // a slow connection: start without the song after 15 s
       ]);
+      btn.innerHTML = label;
       btn.disabled = false;
       show('game');
       G.start(level, diff);
@@ -309,6 +336,7 @@
   const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
   const unlockAudio = () => {
     A.init();
+    if ($('screen-menu').classList.contains('active')) startMenuMusic();
     if (A.isRunning()) UNLOCK_EVENTS.forEach((ev) => window.removeEventListener(ev, unlockAudio, true));
   };
   UNLOCK_EVENTS.forEach((ev) => window.addEventListener(ev, unlockAudio, true));

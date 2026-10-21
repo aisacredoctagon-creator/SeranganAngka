@@ -20,11 +20,12 @@
 <script src="../js/audio.js"></script>
 <script>
 /*
- * Renders the music offline (faster than real time, sample-accurate) and analyses the actual audio:
- *  1. melody notes land on the beat grid, at the right pitch, starting at the scheduled instant
- *  2. wrong notes are always outside the key and never advance the melody
- *  3. a missed problem / wrong answer mutes the ringing melody
- *  4. backing events (drums, bass, harmony) all sit on the eighth-note grid; no clipping
+ * Renders the sound offline (faster than real time, sample-accurate) and analyses the actual audio:
+ *  1. a correct answer plays ONE note: always the same pitch, at once, sample-accurate
+ *  2. a wrong answer is a flat, detuned note a semitone below it
+ *  3. a missed problem silences the ringing note
+ *  4. the synth backing (the fallback when a song cannot load): events on the eighth-note grid, no clipping
+ *  5. the songs are registered for every difficulty tempo
  */
 (async function () {
   const A = NA.Audio, M = NA.MUSIC, SR = 44100, D = 0.006;           // D = master compressor look-ahead
@@ -85,31 +86,28 @@
   const peak = (x) => { let p = 0; for (let i = 0; i < x.length; i++) p = Math.max(p, Math.abs(x[i])); return p; };
   const rms = (x, a, b) => { let s = 0; a = Math.floor(a * SR); b = Math.min(x.length, Math.floor(b * SR)); for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / Math.max(1, b - a)); };
 
-  // ============================================================ 1. melody
+  // ============================================================ 1. one note per correct answer
   const OFFS = [0, .03, -.12, .2, -.3, .07, .15, -.05, .35, 0, -.2, .1, .045, -.01, .06, .25];   // sloppy presses
-  const startAt = 0.2, tol = M.quantize.lateToleranceMs / 1000;
+  const startAt = 0.2;
   for (let L = 0; L < M.tracks.length; L++) {
-    const bpm = BPMS[L], spb = 60 / bpm, grid = M.quantize.gridBeats * spb;
+    const bpm = BPMS[L], spb = 60 / bpm;
     const x = await render(startAt + (4 + 2 * OFFS.length + 6) * spb, () => {
       mutes(true, false, true); A._test.begin(bpm, L);
       OFFS.forEach((off, i) => A.correct(Math.abs(off) <= .1 ? 'perfect' : 'good', null, startAt + (4 + 2 * i) * spb + off));
     });
-    const info = A._test.info(), log = A.debug.log.filter((q) => q.kind === 'melody');
-    let mismatch = 0, offGrid = 0, worstLate = 0, worstPitch = 0, order = 0;
-    log.forEach((q, i) => {
-      const k = Math.max(0, Math.ceil((q.now - startAt - D - tol) / grid - 1e-9));
-      if (Math.abs(Math.max(startAt + k * grid, q.now + 0.003) - q.at) > 1e-9) mismatch++;
-      const pos = (q.at - startAt) / grid, frac = pos - Math.floor(pos + 1e-9);
-      if (Math.min(frac, 1 - frac) * grid > 1e-6) { offGrid++; worstLate = Math.max(worstLate, frac * grid * 1000); }
+    const log = A.debug.log.filter((q) => q.kind === 'correct');
+    let late = 0, wrongPitch = 0, worstPitch = 0;
+    log.forEach((q) => {
+      if (Math.abs(q.at - (q.now + 0.003)) > 1e-9) late++;                      // played at once, not on a grid
+      if (q.midi !== M.correct.midi) wrongPitch++;
       const f = domFreq(x, Math.floor((q.at + D + 0.03) * SR), Math.floor(0.09 * SR), 100, 3000);
       worstPitch = Math.max(worstPitch, Math.abs(1200 * Math.log2(f / mtof(q.midi))));
-      if (q.idx !== i) order++;
     });
-    const ok = log.length === OFFS.length && mismatch === 0 && order === 0 && worstPitch < 30 && worstLate <= tol * 1000 + 3.1;
-    line(ok, `<b>L${L + 1} ${info.track.name}</b> (${info.track.key} ${M.tracks[L].mode}, ${bpm} BPM, ${M.tracks[L].style}/${M.tracks[L].lead}): ${log.length} correct answers → ${log.length - offGrid} exactly on the ${M.quantize.gridBeats}-beat grid, ${offGrid} played immediately (≤ ${worstLate.toFixed(0)} ms after the grid); pitch error ≤ ${worstPitch.toFixed(0)} cents; melody order intact`);
+    line(log.length === OFFS.length && late === 0 && wrongPitch === 0 && worstPitch < 30,
+      `<b>L${L + 1}</b> (${bpm} BPM): ${log.length} correct answers → ${log.length} × the same single note (MIDI ${M.correct.midi}), each played immediately; pitch error ≤ ${worstPitch.toFixed(0)} cents`);
   }
 
-  // onset of each note in the rendered audio vs its scheduled time (single notes, so no ringing tail confuses it)
+  // onset of the note in the rendered audio vs its scheduled time
   {
     let worst = 0, n = 0;
     for (let L = 0; L < M.tracks.length; L++) {
@@ -121,26 +119,16 @@
         worst = Math.max(worst, o.length ? Math.abs((o[0] - rec.at - D) * 1000) : 99); n++;
       }
     }
-    line(worst < 1, `audio onset vs scheduled instant: worst error ${worst.toFixed(2)} ms over ${n} notes (all 7 levels / instruments) - sample-accurate`);
+    line(worst < 1, `audio onset vs scheduled instant: worst error ${worst.toFixed(2)} ms over ${n} notes - sample-accurate`);
   }
 
-  // ============================================================ 2. wrong notes
+  // ============================================================ 2. wrong answer
   for (let L = 0; L < M.tracks.length; L++) {
     A._test.useContext(new OfflineAudioContext(1, SR, SR));
     A._test.begin(BPMS[L], L);
-    const T = A._test.info().track;
-    let inKey = 0, notSemitone = 0, advanced = 0;
-    for (let i = 0; i < 300; i++) {
-      A.correct('good', null, 0.5 + i * 0.01);
-      const lastMelody = A.debug.log.filter((q) => q.kind === 'melody').pop();
-      if (lastMelody.idx !== i) advanced++;                        // a previous wrong answer would have skipped ahead
-      const nextMidi = T.melody[(i + 1) % T.melody.length].midi;   // what the player should have played next
-      A.wrong(0.5 + i * 0.01 + 0.005);
-      const w = A.debug.log[A.debug.log.length - 1];
-      if (T.keyPcs.has(((w.midi % 12) + 12) % 12)) inKey++;
-      if (Math.abs(w.midi - nextMidi) !== 1) notSemitone++;
-    }
-    line(inKey === 0 && notSemitone === 0 && advanced === 0, `<b>L${L + 1}</b> wrong answer ×300: ${inKey} in-key notes, ${notSemitone} not exactly 1 semitone from the expected note, melody advanced by a wrong answer ${advanced}×`);
+    let off = 0;
+    for (let i = 0; i < 200; i++) { A.wrong(0.5 + i * 0.01); if (A.debug.log[A.debug.log.length - 1].midi !== M.correct.midi - 1) off++; }
+    line(off === 0, `<b>L${L + 1}</b> wrong answer ×200: always the note a semitone below the correct one (${off} exceptions)`);
   }
   {   // what a wrong note actually sounds like
     const x = await render(2, () => { mutes(true, false, true); A._test.begin(100, 0); A.wrong(0.5); });
@@ -150,17 +138,17 @@
     line(peak(x) > 0.05 && peak(x) < 0.45 && Math.abs(cents) < 120, `wrong note audio: peak ${peak(x).toFixed(2)} (audible but soft), sounds ${cents.toFixed(0)} cents from its semitone (detuned ±${M.wrong.detuneCents}, sagging flat)`);
   }
 
-  // ============================================================ 3. melody mute after miss / wrong
+  // ============================================================ 3. a miss silences the ringing note
   {
     const bpm = 80, spb = 60 / bpm;
     const base = (extra) => render(6, () => { mutes(true, false, true); A._test.begin(bpm, 0); A.correct('perfect', null, 1.0); if (extra) extra(); });
     const ring = await base(null);
-    const missed = await base(() => A.miss(1.8));
-    const a = rms(ring, 1.95, 2.9), b = rms(missed, 1.95, 2.9);
-    line(b < a * 0.1, `missed problem mutes the ringing melody: level after the miss is ${(100 * b / a).toFixed(1)}% of an uninterrupted note`);
-    const nextOK = await render(6, () => { mutes(true, false, true); A._test.begin(bpm, 0); A.correct('perfect', null, 1.0); A.miss(1.8); A.correct('perfect', null, 1.8 + 3 * spb); });
-    const noteAfter = A.debug.log.filter((q) => q.kind === 'melody');
-    line(noteAfter.length === 2 && noteAfter[1].idx === 1 && rms(nextOK, noteAfter[1].at + 0.02, noteAfter[1].at + 0.3) > 0.01, `melody resumes after a miss: next correct answer plays note #${noteAfter[1].idx + 1} and is clearly audible (the miss did not skip or advance the tune)`);
+    const missed = await base(() => A.miss(1.1));
+    const a = rms(ring, 1.2, 1.5), b = rms(missed, 1.2, 1.5);
+    line(a > 0.005 && b < a * 0.1, `missed problem silences the ringing note: level after the miss is ${(100 * b / a).toFixed(1)}% of an uninterrupted note`);
+    const nextOK = await render(6, () => { mutes(true, false, true); A._test.begin(bpm, 0); A.correct('perfect', null, 1.0); A.miss(1.1); A.correct('perfect', null, 1.1 + 3 * spb); });
+    const notes = A.debug.log.filter((q) => q.kind === 'correct');
+    line(notes.length === 2 && rms(nextOK, notes[1].at + 0.02, notes[1].at + 0.3) > 0.01, 'the next correct answer after a miss is clearly audible again');
   }
 
   // ============================================================ 4. backing
@@ -198,6 +186,46 @@
       A.wrong(startAt + 20 * spb); A.miss(startAt + 28 * spb);
     });
     line(peak(x) < 1 && peak(x) > 0.1, `full mix (backing + melody + wrong + miss): peak ${peak(x).toFixed(2)} - no clipping`);
+  }
+
+  // ============================================================ 5. menu BGM + button sounds
+  {
+    const starts = [];
+    const P = OfflineAudioContext.prototype, origOsc = P.createOscillator, origSrc = P.createBufferSource;
+    const wrap = (orig) => function () { const n = orig.call(this); const st = n.start.bind(n); n.start = (t, ...r) => { starts.push(t); return st(t, ...r); }; return n; };
+    P.createOscillator = wrap(origOsc);
+    P.createBufferSource = wrap(origSrc);
+    const eighth = A._test.menuEighth(), bars = 8, sec = 0.1 + bars * 8 * eighth;
+    let x;
+    try { x = await render(sec + 1, () => { mutes(false, true, true); A._test.menu(sec); }); }
+    finally { P.createOscillator = origOsc; P.createBufferSource = origSrc; }
+    let off = 0;
+    starts.forEach((t) => { const p = (t - 0.1) / eighth; if (Math.abs(p - Math.round(p)) * eighth > 0.0005) off++; });
+    const pk = peak(x), level = rms(x, 1, sec);
+    line(starts.length > 100 && off === 0 && pk < 0.8 && level > 0.005 && level < 0.12,
+      `menu BGM (${bars} bars): ${starts.length} sounds, ${starts.length - off}/${starts.length} on the eighth-note grid; peak ${pk.toFixed(2)}, RMS ${level.toFixed(3)} (quiet background, no clipping)`);
+    // button sounds (hover / click / start): audible but soft
+    const ui = A._test.ui();
+    const hx = await render(0.6, () => { mutes(true, true, false); ui.hover(); ui.click(); ui.start(); });
+    line(peak(hx) > 0.02 && peak(hx) < 0.5, `button sounds (hover, click, Main!): audible but soft, peak ${peak(hx).toFixed(2)}`);
+  }
+
+  // ============================================================ 6. songs
+  {
+    const issues = [];
+    const diffs = (window.__diffs || [80, 100, 120]);
+    diffs.forEach((bpm) => {
+      const sp = M.songs[bpm];
+      if (!sp) { issues.push(bpm + ': no song'); return; }
+      if (!/^assets\/audio\/.+\.mp3$/.test(sp.src)) issues.push(bpm + ': bad src ' + sp.src);
+      if (!(sp.fileBpm > bpm * 0.95 && sp.fileBpm < bpm * 1.05)) issues.push(bpm + ': fileBpm ' + sp.fileBpm + ' is not near the game BPM');
+      if (!(sp.offsetSec >= 0 && sp.offsetSec < 60 / sp.fileBpm)) issues.push(bpm + ': offsetSec ' + sp.offsetSec + ' must lie inside the first beat');
+    });
+    for (const sp of Object.values(M.songs)) {
+      const r = await fetch('../' + sp.src, { method: 'HEAD' });
+      if (!r.ok) issues.push(sp.src + ': HTTP ' + r.status);
+    }
+    line(issues.length === 0, 'songs: 80 / 100 / 120 BPM are registered with src, measured fileBpm and first-beat offset, and the files exist' + (issues.length ? '<br>' + issues.join('<br>') : ''));
   }
 
   document.getElementById('summary').innerHTML = fails ? `<span class="FAIL">${fails} check(s) FAILED</span>` : '<span class="PASS">ALL CHECKS PASSED</span>';

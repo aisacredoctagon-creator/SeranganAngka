@@ -157,7 +157,7 @@
       if (!tr) issues.push(`L${i + 1}: no music track`);
       else {
         if (tr.name !== L.name) issues.push(`L${i + 1}: music track is "${tr.name}", level is "${L.name}"`);
-        if (!tr.melody || !tr.chords || !tr.style || !tr.lead || !tr.key) issues.push(`L${i + 1}: incomplete music track`);
+        if (!tr.chords || !tr.style || !tr.key) issues.push(`L${i + 1}: incomplete music track (style / chords / key for the synth fallback)`);
       }
       if (L.type === 'frac' && !(L.fracTiers && L.fracTiers.length === 5)) issues.push('fraction level needs 5 fracTiers');
       if (L.type === 'dec' && !(L.decTiers && L.decTiers.length === 5)) issues.push('decimal level needs 5 decTiers');
@@ -165,14 +165,14 @@
       if (!NA.fmt.html(L.sample)) issues.push(`L${i + 1}: sample does not render`);
     });
     if (NA.MUSIC.tracks.length !== C.levels.length) issues.push(`${NA.MUSIC.tracks.length} music tracks for ${C.levels.length} levels`);
-    line(issues.length === 0, `level data: all ${C.levels.length} levels (incl. Pecahan and Desimal) have the same fields, a music track (key/chords/melody), keys, colours and BPM for every difficulty${issues.length ? '<br>' + issues.join('<br>') : ''}`);
+    line(issues.length === 0, `level data: all ${C.levels.length} levels (incl. Pecahan and Desimal) have the same fields, a fallback music track (key/chords/style), keys and colours${issues.length ? '<br>' + issues.join('<br>') : ''}`);
   }
 
   // ============================================================ difficulties: one BPM + score multiplier for all levels
   {
-    const want = { easy: [60, 0.5], medium: [100, 1], hard: [120, 1.5] };
+    const want = { easy: [80, 0.5], medium: [100, 1], hard: [120, 1.5] };
     const bad = C.difficulties.filter((d) => !want[d.id] || d.bpm !== want[d.id][0] || d.scoreMult !== want[d.id][1]).map((d) => d.id);
-    line(bad.length === 0 && C.difficulties.length === 3, `difficulties: Mudah 60 BPM x0.5, Sedang 100 BPM x1, Susah 120 BPM x1.5 for every level${bad.length ? ' - wrong: ' + bad : ''}`);
+    line(bad.length === 0 && C.difficulties.length === 3, `difficulties: Mudah 80 BPM x0.5, Sedang 100 BPM x1, Susah 120 BPM x1.5 for every level${bad.length ? ' - wrong: ' + bad : ''}`);
   }
 
   // ============================================================ levels 1-5: all 3 choices end in the same digit
@@ -185,10 +185,12 @@
         const p = NA.makeProblem(li, t, 3);
         n++;
         const ends = new Set(p.options.map((o) => Number(o) % 10));
-        if (p.options.length !== 3 || ends.size !== 1 || p.options.some((o) => !(Number(o) >= 1))) bad.push(`${L.name}: ${p.text} → [${p.options.join(' | ')}]`);
+        const v = p.options.map(Number), ans = Number(p.answer);
+        const okShape = ans <= 9 ? (v[1] === v[0] + 1 && v[2] === v[1] + 1 && v[2] <= 9) : ends.size === 1;      // one-digit answer: 5, 6, 7
+        if (p.options.length !== 3 || !okShape || p.options.some((o) => !(Number(o) >= 1))) bad.push(`${L.name}: ${p.text} → [${p.options.join(' | ')}]`);
       }
     });
-    line(bad.length === 0, `levels 1-5: ${n} problems, 3 positive choices that all end in the same digit${bad.length ? '<br>' + bad.slice(0, 4).join('<br>') : ''}`);
+    line(bad.length === 0, `levels 1-5: ${n} problems, 3 positive choices: consecutive one-digit numbers when the answer is one digit, otherwise all ending in the same digit${bad.length ? '<br>' + bad.slice(0, 4).join('<br>') : ''}`);
   }
 
   // ============================================================ every level x tier x lane count

@@ -5,7 +5,7 @@
  *
  * Strings may contain fraction tokens such as {3/4} or {2 1/3}; render them with NA.fmt.html (js/fractions.js).
  * Whole-number levels: the wrong choices are the right answer +/- a multiple of 10 (e.g. 45, 65, 15), so every choice ends
- * in the same digit and the answer cannot be guessed from it. Decimals do the same with their last decimal digit.
+ * in the same digit and the answer cannot be guessed from it. A one-digit answer gets consecutive one-digit choices (5, 6, 7). Decimals do the same with their last decimal digit.
  * Fraction levels: js/fractions.js (many problem types, "common mistake" distractors).
  */
 (function () {
@@ -33,8 +33,15 @@
     while (start < minVal) start += step;
     return Array.from({ length: lanes }, (_, i) => start + i * step);
   }
-  // Wrong choices = ans +/- 10, 20, 30 ... (nearer ones more likely), never below 1; sorted low -> high with the right one inside.
+  // One-digit answer: the choices are consecutive one-digit numbers (5, 6, 7). Otherwise the wrong choices are
+  // ans +/- 10, 20, 30 ... (nearer ones more likely, never below 1), so all choices end in the same digit.
+  // Sorted low -> high with the right one inside.
   function sameEnding(ans, lanes) {
+    if (ans <= 9 && lanes <= 9) {
+      const lo = Math.max(1, ans - (lanes - 1)), hi = Math.min(ans, 10 - lanes);
+      const start = rand(lo, Math.max(lo, hi));
+      return Array.from({ length: lanes }, (_, i) => start + i);
+    }
     const pool = [];
     for (let k = 1; k <= lanes + 3; k++) for (const s of [-1, 1]) {
       const v = ans + s * 10 * k;
