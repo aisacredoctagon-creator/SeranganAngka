@@ -60,7 +60,7 @@ NA.CONFIG = {
   lives: 5,
   comboStep: 5,             // perfect/good answers in a row needed to raise the multiplier
   maxMultiplier: 4,
-  stars: { two: 0.6, three: 0.85 },   // weighted accuracy needed (finishing = 1 star)
+  stars: { one: 2, two: 4, three: 6 },   // stars come from the number of STAGES (tahap) completed: 2 of 6 = 1 star, 4 = 2 stars, 6 (the whole level) = 3 stars
   // (all levels are open from the start - there is no unlock logic any more)
 
   // ===================== LAYOUT ============================================

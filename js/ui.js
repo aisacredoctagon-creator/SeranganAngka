@@ -85,25 +85,29 @@
   let launching = false;
   function startMenuMusic() {
     if (launching) return;
-    A.ready(1500).then((ok) => { if (ok && !launching && $('screen-menu').classList.contains('active')) A.menuMusic(true); });
+    A.ready(1500).then((ok) => {
+      if (ok && !launching && $('screen-menu').classList.contains('active')) { A.menuTempo(NA.bpmFor(save.level, save.diff)); A.menuMusic(true); }
+    });
   }
-  // hover + click sounds for every button in the menu (hover only for a real pointer, not for touch)
-  {
-    const menu = $('screen-menu');
+  // hover + click sounds for every button of a screen (hover only for a real pointer, not for touch);
+  // the buttons that start a game (Main!, Main Lagi, Lanjut Level) get the rising "start" sound
+  function buttonSounds(screen, startIds) {
     let hovered = null;
-    menu.addEventListener('pointerover', (e) => {
+    screen.addEventListener('pointerover', (e) => {
       const b = e.pointerType === 'touch' ? null : e.target.closest('button');
       if (b === hovered) return;
       hovered = b;
       if (b && !b.disabled) A.uiHover();
     });
-    menu.addEventListener('pointerleave', () => { hovered = null; });
-    menu.addEventListener('click', (e) => {
+    screen.addEventListener('pointerleave', () => { hovered = null; });
+    screen.addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (!b || b.disabled) return;
-      if (b.id === 'btn-play') A.uiStart(); else A.uiClick();
+      if (startIds.includes(b.id)) A.uiStart(); else A.uiClick();
     });
   }
+  buttonSounds($('screen-menu'), ['btn-play']);
+  buttonSounds($('screen-results'), ['res-again', 'res-next']);
 
   function renderMenu() {
     $('hs-value').textContent = highScore().toLocaleString('en-US');
@@ -173,6 +177,7 @@
           return;
         }
         save.diff = i; persist(); renderDiffs();
+        A.menuTempo(d.bpm);                                                // the menu music follows the chosen speed
         A.prepare(save.level, NA.bpmFor(save.level, i));                   // start loading that song already
       });
       box.appendChild(b);

@@ -35,6 +35,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 - **Kecepatan** (sama untuk semua level, dipilih di menu dengan simbol not): 60 BPM poin ×0,25 · 80 BPM ×0,5 · 100 BPM ×1 · 120 BPM ×1,5. Pengali ini dikalikan dengan pengali combo. Semua kecepatan terbuka sejak awal. Sebuah kecepatan bisa dikunci lewat `locked: true, lockHint: '...'` di `difficulties[]` pada `js/config.js` (tampil pudar dengan petunjuk sampai satu level ditamatkan; `?unlock=all` membukanya).
 - Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
+- **Bintang** dari jumlah tahap yang diselesaikan (dari 6): 2 tahap = 1 bintang, 4 tahap = 2 bintang, 6 tahap (level tamat) = 3 bintang. Berlaku juga bila nyawa habis di tengah level.
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas (4 ketukan kosong) tepat saat pindah tahap, sementara pemberitahuan "Tahap n" tampil.
 - Semua level terbuka sejak awal (tidak ada kunci level); "Lanjut Level" di layar hasil selalu tampil dan kembali ke level 1 setelah level terakhir.
 
@@ -51,7 +52,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Mode gerak | `movementMode: 'smooth' \| 'step'`, `step.moveFraction` |
 | Jumlah jalur, jarak antar soal per level | `levels[].{lanes,noteEveryBeats}` |
 | BPM dan pengali poin per kesulitan | `difficulties[].{bpm,scoreMult}` |
-| Nyawa, combo, bintang | `lives`, `comboStep`, `maxMultiplier`, `stars` |
+| Nyawa, combo, bintang | `lives`, `comboStep`, `maxMultiplier`, `stars` (jumlah tahap yang diselesaikan untuk 1 / 2 / 3 bintang) |
 | Tombol keyboard & warna jalur | `keys`, `laneColors` (warna jalur merujuk variabel CSS `--c-lane-*`) |
 
 Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`, `?unlock=all`. Mode gerak bisa diganti di menu utama ("Gerakan: Halus / Per Langkah"), tetapi setiap kunjungan selalu dimulai dari **Halus** (pilihan tidak diingat).

@@ -573,6 +573,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
 .rv-badge { padding: 6px 16px; background: var(--c-red-soft); border: var(--bw-s) solid var(--c-red); border-radius: var(--r-pill); box-shadow: 0 2px 0 var(--c-red); font: 800 14px/16px var(--f-num); color: var(--c-red); white-space: nowrap; }
 .rv-badge[hidden] { display: none; }
 .review { list-style: none; margin: 0; padding: 0; }
+@media (min-width: 861px) {
+  .r-grid { align-items: stretch; }
+  .r-right { display: flex; flex-direction: column; min-height: 380px; contain: size; }      /* contain: its length does not push the row taller */
+  .review { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; margin-right: -8px; scrollbar-width: thin; scrollbar-color: var(--c-ink) transparent; }
+  .review::-webkit-scrollbar { width: 8px; }
+  .review::-webkit-scrollbar-thumb { background: var(--c-ink); border-radius: var(--r-pill); }
+}
 .review li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
 .review li + li { border-top: 1px solid #F3F4F6; }
 .rv-q { display: flex; align-items: center; gap: 8px; min-width: 0; font: 900 clamp(16px, 1.4vw + 9px, 20px)/28px var(--f-num); color: var(--c-ink); }
@@ -588,7 +595,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
 .act-btn { flex: 0 0 auto; min-height: 70px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 17px 31px; border: var(--bw) solid var(--c-ink); border-radius: var(--r-lg); box-shadow: var(--sh-8); font: 400 clamp(20px, 1.2vw + 12px, 30px)/28px var(--f-display); white-space: nowrap; transition: transform .1s, box-shadow .1s; }
 .act-btn.outline { background: var(--c-surface); color: var(--c-ink); }
 .act-btn.primary { flex: 1 1 auto; padding: 19px 39px; background: var(--c-coral); color: #fff; text-transform: uppercase; }
-.act-btn:active { transform: translateY(5px); box-shadow: var(--sh-3); }
+.act-btn { position: relative; overflow: hidden; transition: transform .2s cubic-bezier(.3, 1.7, .5, 1), box-shadow .2s, background-color .15s; }
+.act-btn.primary::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 22%; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); transform: translateX(-130%) skewX(-20deg); pointer-events: none; }
+@media (hover: hover) {
+  .act-btn.outline:hover, .act-btn.outline:focus-visible { background: var(--c-yellow-soft); transform: translateY(-6px) rotate(-1deg); box-shadow: 0 14px 0 var(--c-ink); }
+  .act-btn.outline:nth-child(2):hover { transform: translateY(-6px) rotate(1deg); }
+  .act-btn.primary:hover, .act-btn.primary:focus-visible { background: #FF6A33; transform: translateY(-8px) scale(1.04) rotate(-1deg); box-shadow: 0 14px 0 var(--c-ink); animation: mainGlow 1.1s ease-out infinite; }
+  .act-btn.primary:hover::after, .act-btn.primary:focus-visible::after { animation: mainShine .75s ease-in-out infinite; animation-delay: .1s; }
+  .act-btn.primary:hover .a-ico { animation: triNudge .5s ease-in-out infinite; }
+}
+/* stacked layout (phone / narrow): the buttons sit close together, so the hover is a short lift only - no scale, tilt or glow ring -
+   and the lift + shadow stay inside the gaps (12 px above, 16 px between the rows), nothing overlaps its neighbours */
+@media (max-width: 759px) and (hover: hover) {
+  .act-btn.primary:hover, .act-btn.primary:focus-visible { transform: translateY(-4px); box-shadow: 0 10px 0 var(--c-ink); animation: none; z-index: 2; }
+  .act-btn.outline:hover, .act-btn.outline:focus-visible, .act-btn.outline:nth-child(2):hover { transform: translateY(-3px); box-shadow: 0 7px 0 var(--c-ink); z-index: 2; }
+}
+.act-btn.outline:active, .act-btn.primary:active { transform: translateY(5px) scale(.98); box-shadow: var(--sh-3); animation: none; }
 .act-btn .ic { fill: currentColor; stroke: none; }
 .a-ico { display: grid; }
 
@@ -739,7 +761,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
   .h-word span, .h-box, .h-box-text, .tag { animation: none; }
   .gnotes { display: none; }
   .level:hover, .level:focus-visible { transform: none; }
-  .mode-btn, .snd-btn, .diff-btn, .main-btn, .main-btn::after, .main-btn .play-tri { animation: none !important; transform: none !important; }
+  .mode-btn, .snd-btn, .diff-btn, .main-btn, .main-btn::after, .main-btn .play-tri, .act-btn, .act-btn::after, .act-btn .a-ico { animation: none !important; transform: none !important; }
   .note.hit .note-body, .field.shake, .pad-answer.swap, .toast.show { animation: none; }
   .hitline::before { transform: none; }
 }

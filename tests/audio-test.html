@@ -188,8 +188,9 @@
     line(peak(x) < 1 && peak(x) > 0.1, `full mix (backing + melody + wrong + miss): peak ${peak(x).toFixed(2)} - no clipping`);
   }
 
-  // ============================================================ 5. menu BGM + button sounds
-  {
+  // ============================================================ 5. menu BGM (at every speed) + button sounds
+  for (const mbpm of [60, 80, 100, 120]) {
+    A.menuTempo(mbpm);
     const starts = [];
     const P = OfflineAudioContext.prototype, origOsc = P.createOscillator, origSrc = P.createBufferSource;
     const wrap = (orig) => function () { const n = orig.call(this); const st = n.start.bind(n); n.start = (t, ...r) => { starts.push(t); return st(t, ...r); }; return n; };
@@ -203,7 +204,9 @@
     starts.forEach((t) => { const p = (t - 0.1) / eighth; if (Math.abs(p - Math.round(p)) * eighth > 0.0005) off++; });
     const pk = peak(x), level = rms(x, 1, sec);
     line(starts.length > 100 && off === 0 && pk < 0.8 && level > 0.005 && level < 0.12,
-      `menu BGM (${bars} bars): ${starts.length} sounds, ${starts.length - off}/${starts.length} on the eighth-note grid; peak ${pk.toFixed(2)}, RMS ${level.toFixed(3)} (quiet background, no clipping)`);
+      `menu BGM at ${mbpm} BPM (${bars} bars): ${starts.length} sounds, ${starts.length - off}/${starts.length} on the eighth-note grid; peak ${pk.toFixed(2)}, RMS ${level.toFixed(3)} (quiet background, no clipping)`);
+  }
+  {
     // button sounds (hover / click / start): audible but soft
     const ui = A._test.ui();
     const hx = await render(0.6, () => { mutes(true, true, false); ui.hover(); ui.click(); ui.start(); });

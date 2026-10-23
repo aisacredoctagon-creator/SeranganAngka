@@ -573,17 +573,15 @@
     const accuracy = answered
       ? (S.perfect * w.perfect + S.good * w.good + S.early * w.early + S.late * w.late) / answered
       : 0;
-    let stars = 0;
-    if (!S.gameOver) {
-      stars = 1;
-      if (accuracy >= C.stars.two) stars = 2;
-      if (accuracy >= C.stars.three) stars = 3;
-    }
+    // stars = stages completed (also when the lives ran out): a stage is done when all its correct answers are in
+    let stagesDone = 0, acc = 0;
+    for (const t of C.tiers) { acc += need(t); if (S.correct >= acc) stagesDone++; else break; }
+    const stars = stagesDone >= C.stars.three ? 3 : stagesDone >= C.stars.two ? 2 : stagesDone >= C.stars.one ? 1 : 0;
     const res = {
       levelIdx: S.levelIdx, diffIdx: S.diffIdx, bpm: S.bpm, tier: tierIndex(S.correct) + 1,
       score: S.score, accuracy, maxStreak: S.maxStreak,
       perfect: S.perfect, good: S.good, offBeat: S.early + S.late, miss: S.miss,
-      review: S.review, stars, gameOver: S.gameOver, correct: S.correct,
+      review: S.review, stars, stagesDone, gameOver: S.gameOver, correct: S.correct,
     };
     if (S.gameOver) A.fail(); else A.fanfare();
     S.finishing = true;

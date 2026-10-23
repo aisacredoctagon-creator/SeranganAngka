@@ -401,12 +401,12 @@
   };
 
   // ---------------------------------------------------------------- main-menu BGM (a small synth loop, no file)
-  // C - Am - F - G, 92 BPM: soft pad, bass, a gentle plucked arpeggio and a very light beat. It plays only in the menu,
+  // C - Am - F - G (92 BPM until the menu sets the chosen speed with A.menuTempo): soft pad, bass, a gentle plucked arpeggio and a very light beat. It plays only in the menu,
   // on its own gain node (so it can be faded out) feeding the Musik bus.
   const MENU_BPM = 92, MENU_CHORDS = ['C', 'Am', 'F', 'G'];
   const MENU_ARP = [1, 1, 1, 0, 1, 1, 1, 1], MENU_ARP_IDX = [0, 1, 2, 1, 2, 1, 0, 1];
   let menuTimer = null, menuBus = null, menuStartAt = 0, menuNext = 0, menuChords = null;
-  const menuEighth = 60 / MENU_BPM / 2;
+  let menuEighth = 60 / MENU_BPM / 2;
   function menuStep(step, t) {
     const s = step % 8, ch = menuChords[Math.floor(step / 8) % menuChords.length], out = { bus: menuBus };
     if (s === 0) ch.tones.forEach((tn) => tone(mtof(ch.voice + tn), t, Object.assign({ type: 'sine', attack: 0.35, dur: 8 * menuEighth, gain: 0.05 }, out)));
@@ -451,6 +451,14 @@
     menuTimer = setInterval(() => { if (ctx) menuPump(ctx.currentTime + 0.2); }, 50);
   };
   A.menuPlaying = () => !!menuTimer;
+  // The menu BGM follows the speed chosen on the menu (60 / 80 / 100 / 120 BPM). While it plays, the change keeps the very
+  // next step where it was and spaces everything after it at the new tempo - no restart, no gap.
+  A.menuTempo = function (bpm) {
+    if (!(bpm > 0)) return;
+    const next = menuStartAt + menuNext * menuEighth;                // when the next unscheduled step would sound
+    menuEighth = 60 / bpm / 2;
+    if (menuTimer) menuStartAt = next - menuNext * menuEighth;
+  };
 
   // ---------------------------------------------------------------- jingles & UI
   // Menu button sounds: silent until the audio is running (a hover is not a user gesture, so it must not wake the audio).
