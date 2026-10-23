@@ -10,17 +10,16 @@ NA.CONFIG = {
   approachBeats: 4,         // beats a problem takes to fall from the top to the target line (3-4 feels right)
   leadBeats: 4,             // beat on which the very first problem reaches the line
   // How often a problem reaches the line is set per level (levels[].noteEveryBeats below).
-  breather: {               // rest after a run of problems: nothing falls for a few beats
+  breather: {               // breathing room at every change of stage (tahap): nothing falls for a few beats
     enabled: true,
-    everyMin: 5, everyMax: 8,     // a rest comes after this many problems (random between)
-    beatsMin: 2, beatsMax: 4,     // ...and lasts this many empty beats (random between)
+    beats: 4,               // empty beats before the first problem of the new stage (the "Tahap n" notice shows meanwhile)
   },
 
   // ===================== 2. TIMING FORGIVENESS =============================
   windows: {                // seconds either side of the beat
     perfect: 0.10,          // +-100 ms
     good: 0.25,             // +-250 ms
-    accept: 0.40,           // +-400 ms: a correct answer in here still counts (as Early / Late)
+    accept: 0.60,           // +-600 ms: a correct answer in here still counts ("Kurang Pas", early or late)
   },
   inputOffsetMs: 0,         // manual latency calibration (+ = judge later)
   points: { perfect: 100, good: 60, early: 30, late: 30 },

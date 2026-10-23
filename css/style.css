@@ -346,7 +346,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
   .m-actions { flex: none; flex-direction: column; align-items: stretch; gap: 10px; padding: 0; background: none; border: 0; box-shadow: none; }
   .m-diff { flex: none; width: 100%; }
   .diff-switch { min-height: 66px; padding: 5px; gap: 3px; background: var(--c-well); border-radius: var(--r-xl); box-shadow: var(--sh-3); }
-  .diff-btn { min-height: 54px; padding: 4px 2px; font-size: 13px; line-height: 18px; border-radius: var(--r-md); }
+  .diff-btn { min-height: 54px; padding: 4px 2px; font-size: 13px; line-height: 18px; border-radius: calc(var(--r-xl) - var(--bw) - 5px); }   /* concentric with the container (its radius - border - padding), so both curves match */
   .diff-btn .ic, .diff-btn.selected .ic { width: 22px; height: 22px; }
   .diff-btn.selected { font-size: 14px; }
   .diff-tip { bottom: calc(100% + 14px); max-width: 200px; }

@@ -184,8 +184,7 @@
       levelIdx, diffIdx, lanes, bpm, spb, stepMode, scoreMult: C.difficulties[diffIdx].scoreMult,
       approach, approachSec: approach * spb, pxPerBeat: (LINE_Y - SPAWN_Y) / approach,
       interval: L.noteEveryBeats,
-      notes: [], cur: 0, nextBeat: C.leadBeats, sinceBreath: 0,
-      breathAt: rand(C.breather.everyMin, C.breather.everyMax),
+      notes: [], cur: 0, nextBeat: C.leadBeats,
       correct: 0, tier: 0, total: totalCorrect(), lastText: '', padNote: null,
       score: 0, streak: 0, maxStreak: 0, lives: C.lives,
       perfect: 0, good: 0, early: 0, late: 0, miss: 0, review: [],
@@ -222,7 +221,11 @@
     // A problem is created before the previous one has been answered, so count the problems
     // still on screen as if they will be answered correctly - otherwise the tier would lag by one.
     const tIdx = tierIndex(S.correct + (S.notes.length - S.cur));
-    if (tIdx !== S.tier) { S.tier = tIdx; tierToast(tIdx); }
+    if (tIdx !== S.tier) {                                         // a new stage: show it and leave some breathing room first
+      S.tier = tIdx;
+      tierToast(tIdx);
+      if (C.breather.enabled) S.nextBeat += C.breather.beats;
+    }
     let p, tries = 0;
     do { p = NA.makeProblem(S.levelIdx, digitTier(tIdx), S.lanes); } while (++tries < 8 && p.text === S.lastText);
     S.lastText = p.text;
@@ -233,15 +236,7 @@
     };
     S.notes.push(note);
 
-    // when does the NEXT one arrive? every `interval` beats, plus an occasional breather
-    let gap = S.interval;
-    S.sinceBreath++;
-    if (C.breather.enabled && S.sinceBreath >= S.breathAt) {
-      gap += rand(C.breather.beatsMin, C.breather.beatsMax);
-      S.sinceBreath = 0;
-      S.breathAt = rand(C.breather.everyMin, C.breather.everyMax);
-    }
-    S.nextBeat += gap;
+    S.nextBeat += S.interval;                                      // the next one arrives `interval` beats later
     refreshPads();
     updateHud();
   }

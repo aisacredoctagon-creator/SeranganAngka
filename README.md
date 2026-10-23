@@ -31,11 +31,11 @@ serve.js                server statis kecil untuk pengembangan lokal
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
 - Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
-- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Kurang Pas** ±400 ms (benar tapi kurang pas, baik terlalu cepat maupun terlambat: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
+- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Kurang Pas** ±600 ms (benar tapi kurang pas, baik terlalu cepat maupun terlambat: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
 - **Kecepatan** (sama untuk semua level, dipilih di menu dengan simbol not): 60 BPM poin ×0,25 · 80 BPM ×0,5 · 100 BPM ×1 · 120 BPM ×1,5. Pengali ini dikalikan dengan pengali combo. Semua kecepatan terbuka sejak awal. Sebuah kecepatan bisa dikunci lewat `locked: true, lockHint: '...'` di `difficulties[]` pada `js/config.js` (tampil pudar dengan petunjuk sampai satu level ditamatkan; `?unlock=all` membukanya).
 - Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
-- Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
+- Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas (4 ketukan kosong) tepat saat pindah tahap, sementara pemberitahuan "Tahap n" tampil.
 - Semua level terbuka sejak awal (tidak ada kunci level); "Lanjut Level" di layar hasil selalu tampil dan kembali ke level 1 setelah level terakhir.
 
 ## Semua pengaturan ada di `js/config.js`
@@ -43,7 +43,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 |---|---|
 | Jarak antar soal (beat) | `levels[].noteEveryBeats` (4 → 3 → 2) |
 | Waktu jatuh (beat) | `approachBeats` (default 4) |
-| Jeda napas | `breather.{everyMin,everyMax,beatsMin,beatsMax}` |
+| Jeda napas saat pindah tahap | `breather.{enabled,beats}` |
 | Jendela waktu | `windows.{perfect,good,accept}` |
 | Poin / aturan combo Kurang Pas (cepat atau lambat) | `points`, `offBeat.{breaksCombo,advancesCombo}` |
 | Tahap kesulitan (naik per **jumlah jawaban benar**, bukan skor) | `tiers[].{digits,correct}`, `defaultCorrect` (10) |
