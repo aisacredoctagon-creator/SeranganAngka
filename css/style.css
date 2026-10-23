@@ -565,7 +565,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
 
 .rv-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 2px dashed #E5E7EB; }
 .rv-head h3 { margin: 0; font: 900 24px/32px var(--f-num); letter-spacing: -.6px; color: var(--c-ink); }
-.rv-sub { display: flex; align-items: center; gap: 12px; padding: 8px 0 18px; margin-bottom: 4px; border-bottom: 2px dashed #E5E7EB; }
+.rv-sub { display: flex; align-items: center; gap: 12px; padding: 12px 0 6px; }
 .rv-sub[hidden] { display: none; }
 .rv-score { display: flex; align-items: center; gap: 8px; letter-spacing: -.6px; white-space: nowrap; color: var(--c-ink); }
 .rv-score span { font: 800 14px/32px var(--f-num); }
@@ -584,11 +584,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
 .review li + li { border-top: 1px solid #F3F4F6; }
 .rv-q { display: flex; align-items: center; gap: 8px; min-width: 0; font: 900 clamp(16px, 1.4vw + 9px, 20px)/28px var(--f-num); color: var(--c-ink); }
 .rv-dot { flex: none; width: 8px; height: 8px; background: #FF1744; border-radius: var(--r-pill); }
-.rv-eq { min-width: 0; white-space: pre-wrap; }
+/* the question and the wrong answer are flex items centred on one line, so stacked fractions and the signs between them line up */
+.rv-eq { display: inline-flex; align-items: center; gap: .28em; min-width: 0; white-space: nowrap; }
 .rv-ok { flex: none; padding: 7px 13px; background: #E8F5E9; border: 1px solid var(--c-green-combo); border-radius: var(--r-md); font: 900 20px/20px var(--f-num); color: var(--c-green-combo); white-space: nowrap; }
 .rv-ok .fr { font-size: .8em; }
 .rv-wrong { display: inline-flex; align-items: center; font: inherit; color: var(--c-red); white-space: nowrap; }
-.rv-wrong .fr { font-size: .8em; }
 .review .rv-empty { display: block; border: 0; padding: 12px 0; font: 900 18px/1.4 var(--f-num); color: var(--c-green-answer); }
 
 .r-actions { flex: none; margin-bottom: auto; width: 100%; max-width: 851px; display: flex; align-items: center; justify-content: center; gap: 20px; padding: clamp(16px, 2.4dvh, 27px) 27px; background: var(--c-surface); border: var(--bw) solid var(--c-ink); border-radius: var(--r-xl); box-shadow: var(--sh-8); }
@@ -649,7 +649,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--c-purple); 
   .rv-score span { font-size: 12px; }
   .rv-score b { font-size: 20px; letter-spacing: -.6px; }
   .rv-badge { padding: 6px 16px; font-size: 12px; }
-  .rv-sub { padding: 8px 0 10px; margin-bottom: 0; }
+  .rv-sub { padding: 10px 0 4px; }
   .review { padding-top: 4px; }
   .review li { padding: 8px 0; border-bottom: 1px solid #E5E7EB; }
   .review li + li { border-top: 0; }
