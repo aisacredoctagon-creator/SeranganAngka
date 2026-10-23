@@ -47,15 +47,17 @@
     const f = `<span class="fr"><span class="fn${n === '?' ? ' q' : ''}">${n}</span><span class="fd${d === '?' ? ' q' : ''}">${d}</span></span>`;
     return w ? `<span class="mx"><span class="mw">${w}</span>${f}</span>` : f;
   }
+  // the division sign gets its own drawing (css .dv): in the heavy number font it looks like a plus
+  const divSign = (t) => t.split('÷').join('<i class="dv" aria-hidden="true"></i>');
   NA.fmt = {
     html(s) {
       let out = '', last = 0, m;
       TOKEN.lastIndex = 0;
       while ((m = TOKEN.exec(s))) {
-        out += esc(s.slice(last, m.index)) + fracHtml(m[1], m[2], m[3]);
+        out += divSign(esc(s.slice(last, m.index))) + fracHtml(m[1], m[2], m[3]);
         last = m.index + m[0].length;
       }
-      return out + esc(s.slice(last));
+      return out + divSign(esc(s.slice(last)));
     },
     plain: (s) => s.replace(TOKEN, (_, w, n, d) => `${w ? w + ' ' : ''}${n}/${d}`),
     hasFraction: (s) => s.indexOf('{') >= 0,

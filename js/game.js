@@ -66,10 +66,10 @@
     if (S) S.pxPerBeat = (LINE_Y - SPAWN_Y) / S.approach;
     return true;
   }
-  // The dashed lane lines scroll down at exactly the speed the problems fall (CSS animation, one dash period = 48 px).
+  // The notes on the lane lines scroll down at exactly the speed the problems fall (CSS animation, one pattern = 340 px).
   function syncDash() {
     if (!S) return;
-    el.field.style.setProperty('--dash-dur', `${(48 / (S.pxPerBeat / S.spb)).toFixed(3)}s`);
+    el.field.style.setProperty('--dash-dur', `${(340 / (S.pxPerBeat / S.spb)).toFixed(3)}s`);
   }
   G.relayout = function () {
     if (!layoutMetrics() || !S) return;
@@ -298,7 +298,7 @@
   }
 
   // ---- judging ---------------------------------------------------------------------
-  const LABELS = { perfect: 'SEMPURNA!', good: 'BAGUS!', early: 'CEPAT!', late: 'LAMBAT!', wrong: 'KEPELESET!', pass: 'KEPELESET!' };
+  const LABELS = { perfect: 'SEMPURNA!', good: 'BAGUS!', early: 'TELAT!', late: 'TELAT!', wrong: 'KEPELESET!', pass: 'KEPELESET!' };
   const TONES = { perfect: 'perfect', good: 'good', early: 'off', late: 'off', wrong: 'bad', pass: 'bad' };
 
   function judge(n, kind, picked) {
@@ -335,7 +335,7 @@
       void el.field.offsetWidth;
       el.field.classList.add('shake');
     }
-    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind], n.lane);     // points + rating in one badge
+    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind]);     // points + rating in one badge
     if (n.el) {
       n.el.classList.remove('current');
       n.el.classList.add(hit ? 'hit' : 'miss', `k-${kind}`);
@@ -353,9 +353,8 @@
     refreshPads();
   }
 
-  function showJudge(text, tone, lane) {
+  function showJudge(text, tone) {
     const j = el.judge;
-    j.style.setProperty('--jx', `${(((lane === undefined ? (S.lanes - 1) / 2 : lane) + 0.5) / S.lanes * 100).toFixed(2)}%`);      // the badge sits above the lane the problem fell in
     j.textContent = text;
     j.className = `judge ${tone}`;
     void j.offsetWidth;
@@ -542,7 +541,7 @@
       levelIdx: S.levelIdx, diffIdx: S.diffIdx, bpm: S.bpm, tier: tierIndex(S.correct) + 1,
       score: S.score, accuracy, maxStreak: S.maxStreak,
       perfect: S.perfect, good: S.good, offBeat: S.early + S.late, miss: S.miss,
-      review: S.review, stars, gameOver: S.gameOver,
+      review: S.review, stars, gameOver: S.gameOver, correct: S.correct,
     };
     if (S.gameOver) A.fail(); else A.fanfare();
     S.finishing = true;

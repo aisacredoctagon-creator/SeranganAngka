@@ -24,8 +24,8 @@
   <section id="screen-menu" class="screen active" aria-label="Menu">
     <div class="wrap menu">
       <header class="m-topbar">
-        <div class="hs-pill" title="Skor tertinggi">
-          <span class="hs-label">Skor Tertinggi</span>
+        <div class="hs-pill" title="Rekor saya">
+          <span class="hs-label">Rekor Saya</span>
           <b id="hs-value" class="hs-value">0</b>
         </div>
         <div class="m-tools">
@@ -35,7 +35,7 @@
             <button type="button" class="mode-btn" data-mode="step" aria-pressed="false"><span class="per">Per </span>Langkah</button>
           </div>
           <div class="snd-wrap">
-            <button id="btn-sound" type="button" class="snd-btn" aria-label="Pengaturan suara" aria-expanded="false" aria-controls="snd-pop"><span class="snd-text">Suara</span><span class="snd-ico" data-icon="volume-2" data-size="22"></span></button>
+            <button id="btn-sound" type="button" class="snd-btn" aria-label="Pengaturan suara" aria-expanded="false" aria-controls="snd-pop"><span class="snd-ico" data-icon="volume-1" data-size="24"></span></button>
             <div id="snd-pop" class="snd-pop" hidden><div class="snd-title">Suara</div><div class="snd-panel" data-sound-panel></div></div>
           </div>
         </div>
@@ -48,20 +48,16 @@
             <span class="h-word" aria-hidden="true"><span style="--i:0">S</span><span style="--i:1">e</span><span style="--i:2">r</span><span style="--i:3">a</span><span style="--i:4">n</span><span style="--i:5">g</span><span style="--i:6">a</span><span style="--i:7">n</span></span>
             <span class="h-box" aria-hidden="true"><span class="h-box-text">Angka</span><span class="tag tag-yellow">Arcade</span></span>
           </h1>
-          <p class="catch"><span aria-hidden="true">🎵</span> Pilih jawaban benar yang seirama!</p>
+          <p class="catch"><span aria-hidden="true">🎵</span> Pilih jawaban benar sesuai irama!</p>
         </div>
 
         <section class="m-levels">
-          <div class="section-head">
-            <h2 class="section-label"><span class="star-badge" data-icon="star" data-size="16"></span>Pilih Level Tantangan</h2>
-            <span id="lv-count" class="count-pill">7 Level Terbuka</span>
-          </div>
           <div id="levels" class="levels" role="group" aria-label="Pilih level"></div>
         </section>
 
         <div class="m-actions">
           <div class="m-diff">
-            <div class="diff-label" id="diff-label">Tingkat Kesusahan</div>
+            <div class="diff-label" id="diff-label">Kecepatan</div>
             <div id="diffs" class="diff-switch" role="group" aria-labelledby="diff-label"></div>
           </div>
           <span class="m-sep" aria-hidden="true"></span>
@@ -84,7 +80,7 @@
           <div id="score" class="score" aria-label="Skor">0</div>
         </div>
         <div class="hud-right">
-          <button id="btn-pause" type="button" class="pause-btn" aria-label="Jeda"><span class="pause-ico" data-icon="pause" data-size="14"></span><span class="pause-text">Jeda</span></button>
+          <button id="btn-pause" type="button" class="pause-btn" aria-label="Jeda"><span class="pause-ico" data-icon="pause" data-size="20"></span></button>
           <div id="lives" class="lives" aria-label="Nyawa"></div>
         </div>
       </div>
@@ -113,7 +109,7 @@
         <div class="r-head">
           <div id="res-stars" class="stars"></div>
           <h2 id="res-title">Nyawa Habis</h2>
-          <p id="res-sub" class="info-pill">Level 1 - Penjumlahan • 60 BPM • Tahap 1</p>
+          <p id="res-sub" class="info-pill">Penjumlahan • 60 BPM</p>
         </div>
 
         <div class="r-grid">
@@ -127,21 +123,22 @@
               <h3 class="timing-head"><span class="t-d">Timing &amp; Ketukan</span><span class="t-m">Waktu Ketukan</span></h3>
               <div class="bar-row"><div class="bar-top"><span>Sempurna</span><b id="res-perfect">0</b></div><div class="bar"><i id="bar-perfect" class="perfect"></i></div></div>
               <div class="bar-row"><div class="bar-top"><span>Bagus</span><b id="res-good">0</b></div><div class="bar"><i id="bar-good" class="good"></i></div></div>
-              <div class="bar-row"><div class="bar-top"><span>Cepat / Lambat</span><b id="res-off">0</b></div><div class="bar"><i id="bar-off" class="off"></i></div></div>
+              <div class="bar-row"><div class="bar-top"><span>Telat</span><b id="res-off">0</b></div><div class="bar"><i id="bar-off" class="off"></i></div></div>
               <div class="bar-row"><div class="bar-top"><span>Kepeleset</span><b id="res-miss">0</b></div><div class="bar"><i id="bar-miss" class="miss"></i></div></div>
             </div>
           </div>
 
           <div class="r-card r-right">
-            <div class="rv-head"><h3><span class="t-d">Review</span><span class="t-m">Recap</span></h3><span id="res-missbadge" class="rv-badge">0 Soal Terlewat</span></div>
+            <div class="rv-head"><h3>Review</h3></div>
+            <div class="rv-sub"><span id="res-missbadge" class="rv-badge">0 Soal Terlewat</span><b id="res-answered" class="rv-answered">0 Soal Terjawab</b></div>
             <ul id="res-review" class="review"></ul>
           </div>
         </div>
 
         <div class="r-actions">
-          <button id="res-next" type="button" class="act-btn outline"><span class="a-txt">Lanjut Level</span><span class="a-ico" data-icon="chevrons-right" data-size="18"></span></button>
-          <button id="res-again" type="button" class="act-btn primary"><span class="a-ico" data-icon="play" data-size="16"></span>Main Lagi</button>
-          <button id="res-menu" type="button" class="act-btn outline"><span class="a-ico" data-icon="house" data-size="18"></span>Balik Menu</button>
+          <button id="res-menu" type="button" class="act-btn outline">Balik Menu</button>
+          <button id="res-again" type="button" class="act-btn outline">Main Lagi</button>
+          <button id="res-next" type="button" class="act-btn primary"><span class="a-ico" data-icon="play" data-size="16"></span>Lanjut Level</button>
         </div>
       </div>
     </div>

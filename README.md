@@ -31,8 +31,8 @@ serve.js                server statis kecil untuk pengembangan lokal
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
 - Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
-- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Cepat/Lambat** ±400 ms (benar tapi kurang pas: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
-- **Kesulitan** (sama untuk semua level): Mudah = 80 BPM, poin ×0,5 · Sedang = 100 BPM, poin ×1 · Susah = 120 BPM, poin ×1,5. Pengali ini dikalikan dengan pengali combo.
+- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Telat** ±400 ms (benar tapi kurang pas, baik terlalu cepat maupun terlambat: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
+- **Kecepatan** (sama untuk semua level, dipilih di menu dengan simbol not): 60 BPM poin ×0,25 · 80 BPM ×0,5 · 100 BPM ×1 · 120 BPM ×1,5. Pengali ini dikalikan dengan pengali combo. **120 BPM terkunci** (pudar, dengan petunjuk "Kamu harus menuntaskan tahap 6") sampai pemain menamatkan satu level (menang, bukan kalah); buka langsung dengan `?unlock=all`. Kunci ini diatur lewat `locked` di `difficulties[]` pada `js/config.js`.
 - Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
@@ -45,7 +45,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Waktu jatuh (beat) | `approachBeats` (default 4) |
 | Jeda napas | `breather.{everyMin,everyMax,beatsMin,beatsMax}` |
 | Jendela waktu | `windows.{perfect,good,accept}` |
-| Poin / aturan combo Cepat-Lambat | `points`, `offBeat.{breaksCombo,advancesCombo}` |
+| Poin / aturan combo Telat (cepat atau lambat) | `points`, `offBeat.{breaksCombo,advancesCombo}` |
 | Tahap kesulitan (naik per **jumlah jawaban benar**, bukan skor) | `tiers[].{digits,correct}`, `defaultCorrect` (10) |
 | Kedekatan pilihan jawaban | `distractorStep` (per tahap; kecil = lebih dekat) |
 | Mode gerak | `movementMode: 'smooth' \| 'step'`, `step.moveFraction` |
@@ -54,7 +54,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Nyawa, combo, bintang | `lives`, `comboStep`, `maxMultiplier`, `stars` |
 | Tombol keyboard & warna jalur | `keys`, `laneColors` (warna jalur merujuk variabel CSS `--c-lane-*`) |
 
-Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`. Mode gerak juga bisa diganti di menu utama ("Gerakan: Halus / Per Langkah") dan pilihan itu diingat.
+Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`, `?unlock=all`. Mode gerak bisa diganti di menu utama ("Gerakan: Halus / Per Langkah"), tetapi setiap kunjungan selalu dimulai dari **Halus** (pilihan tidak diingat).
 
 ## Mobile & layar lain
 - Layout fluid (rem, `clamp()`, flex/grid, `dvh`) tanpa ukuran piksel tetap: satu CSS untuk ponsel 360 px sampai desktop 1920 px. Portrait diutamakan: ladang jatuh mengisi sisa tinggi layar, lane jawaban di bawah (zona jempol). Landscape ponsel memakai aturan `max-height: 520px` yang lebih rapat. Padding `env(safe-area-inset-*)` menghormati notch dan bar navigasi.
@@ -75,7 +75,7 @@ Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`. Mode gerak juga bisa dig
 
 ## Sistem suara
 Tiga lapisan suara di mesin audio, dengan dua kontrol di layar (tombol bisu + slider volume; tombol "Suara" di menu utama dan layar Jeda). Slider **Efek** mengatur lapisan **nada** dan **efek** sekaligus:
-- **Musik**: lagu sungguhan di `assets/audio/` — **Mudah = 80 BPM, Sedang = 100 BPM, Susah = 120 BPM**. Semua level memakai lagu sesuai kesulitan yang dipilih.
+- **Musik**: lagu sungguhan di `assets/audio/` untuk **80, 100, dan 120 BPM**; semua level memakai lagu sesuai kecepatan yang dipilih. **60 BPM belum punya lagu** (nanti diganti lagu dari Suno): untuk sementara dimainkan backing sintesis bawaan yang dibuat dari `style` + `chords` tiap level.
 - **Nada**: jawaban benar = **satu nada pendek** (selalu nada yang sama, langsung bunyi). Jawaban salah = nada fals satu semitone di bawahnya. Soal yang terlewat = bunyi "tuk" tanpa nada dan nada yang sedang berdering dibungkam.
 - **Efek**: bunyi hover dan klik tombol di menu utama (tick pendek saat kursor masuk, "pop" saat klik, arpeggio naik untuk tombol Main!), klik menu, dan jingle akhir level.
 - **BGM menu utama**: loop synth sederhana (C – Am – F – G, 92 BPM: pad lembut, bass, arpeggio, ketukan tipis) yang berjalan di bawah slider **Musik**. Mulai setelah klik atau tombol pertama (browser memblokir suara otomatis sebelum itu), berhenti saat game dimulai, dan menyala lagi saat kembali ke menu.
@@ -101,4 +101,4 @@ Taruh file mp3 baru di `assets/audio/`, ukur tempo dan ketukan pertamanya dengan
 ## Tampilan
 UI mengikuti desain Figma "Alat Peraga Digital" bagian "Pop Play" (latar krem, outline tebal gelap, bayangan datar, aksen oranye). Semua token (warna, font, radius, outline, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Rubik (angka, judul) dan Fredoka One (tombol, nama level) dari Google Fonts. Badge penilaian menampilkan poin + penilaian, mis. "+100 SEMPURNA!".
 
-Garis putus-putus pemisah jalur bergerak turun secepat soal jatuh (dan berhenti saat jeda); garis target punya zona merah transparan di bawahnya. Judul menu dan kartu level punya animasi (dimatikan jika perangkat meminta *reduced motion*).
+Garis pemisah jalur berupa deretan not kecil yang samar (satu not, lalu sepasang not balok) dan bergerak turun secepat soal jatuh, jadi mengikuti BPM (berhenti saat jeda); garis target punya zona merah transparan di bawahnya. Judul menu dan kartu level punya animasi (dimatikan jika perangkat meminta *reduced motion*).

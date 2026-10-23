@@ -91,11 +91,14 @@ NA.CONFIG = {
   },
 
   // ===================== TEMPO ==============================================
-  // The same for EVERY level: bpm = tempo, scoreMult = multiplier on all points (on top of the combo multiplier).
+  // The speed choices on the menu, the same for EVERY level: bpm = tempo, scoreMult = multiplier on all points (on top of
+  // the combo multiplier). 60 BPM has no song file yet (the built-in synth backing plays); 80 / 100 / 120 use assets/audio.
   difficulties: [
-    { id: 'easy',   label: 'Mudah',  bpm: 80,  scoreMult: 0.5 },
-    { id: 'medium', label: 'Sedang', bpm: 100, scoreMult: 1 },
-    { id: 'hard',   label: 'Susah',  bpm: 120, scoreMult: 1.5 },
+    { id: 'bpm60',  label: '60 BPM',  bpm: 60,  scoreMult: 0.25 },
+    { id: 'bpm80',  label: '80 BPM',  bpm: 80,  scoreMult: 0.5 },
+    { id: 'bpm100', label: '100 BPM', bpm: 100, scoreMult: 1 },
+    // locked: shown faded with a hint until the player has FINISHED a level once (all 6 stages) - or open it with ?unlock=all
+    { id: 'bpm120', label: '120 BPM', bpm: 120, scoreMult: 1.5, locked: true, lockHint: 'Kamu harus menuntaskan tahap 6' },
   ],
 
   // ===================== LEVELS ============================================
@@ -110,7 +113,7 @@ NA.CONFIG = {
     { name: 'Perkalian',   sample: '3 × 4',     type: 'mul', glyph: '×',  lanes: 3, noteEveryBeats: 4, cap: [2, 2] },
     { name: 'Pengurangan', sample: '8 - 4',     type: 'sub', glyph: '−',  lanes: 3, noteEveryBeats: 3 },
     { name: 'Pembagian',   sample: '4 ÷ 2',     type: 'div', glyph: '÷',  lanes: 3, noteEveryBeats: 3, cap: [2, 1] },
-    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix', glyph: '±',  lanes: 3, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
+    { name: 'Campur',      sample: '+ × - ÷',   type: 'mix', glyph: '+ × − ÷',  lanes: 3, noteEveryBeats: 3, mixOf: [0, 1, 2, 3] },
     // Pecahan / Desimal: 3 answer choices like every other level, and ALL choices END THE SAME WAY so the answer cannot be
     // guessed from the last digit: decimals share the last decimal digit (5.37 / 5.47 / 5.57) and fractions share the
     // denominator ({3/8} / {5/8} / {7/8}). The generators in problems.js / fractions.js enforce it.

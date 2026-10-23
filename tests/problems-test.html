@@ -168,11 +168,11 @@
     line(issues.length === 0, `level data: all ${C.levels.length} levels (incl. Pecahan and Desimal) have the same fields, a fallback music track (key/chords/style), keys and colours${issues.length ? '<br>' + issues.join('<br>') : ''}`);
   }
 
-  // ============================================================ difficulties: one BPM + score multiplier for all levels
+  // ============================================================ speeds: one BPM + score multiplier for all levels
   {
-    const want = { easy: [80, 0.5], medium: [100, 1], hard: [120, 1.5] };
+    const want = { bpm60: [60, 0.25], bpm80: [80, 0.5], bpm100: [100, 1], bpm120: [120, 1.5] };
     const bad = C.difficulties.filter((d) => !want[d.id] || d.bpm !== want[d.id][0] || d.scoreMult !== want[d.id][1]).map((d) => d.id);
-    line(bad.length === 0 && C.difficulties.length === 3, `difficulties: Mudah 80 BPM x0.5, Sedang 100 BPM x1, Susah 120 BPM x1.5 for every level${bad.length ? ' - wrong: ' + bad : ''}`);
+    line(bad.length === 0 && C.difficulties.length === 4, `speeds: 60 BPM x0.25, 80 BPM x0.5, 100 BPM x1, 120 BPM x1.5 (120 starts locked: ${!!C.difficulties[3].locked}) for every level${bad.length ? ' - wrong: ' + bad : ''}`);
   }
 
   // ============================================================ levels 1-5: all 3 choices end in the same digit
