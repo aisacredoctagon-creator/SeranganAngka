@@ -75,7 +75,7 @@ Pintasan URL: `?mode=step`, `?mode=smooth`, `?lanes=4`, `?unlock=all`. Mode gera
 
 ## Sistem suara
 Tiga lapisan suara di mesin audio, dengan dua kontrol di layar (tombol bisu + slider volume; tombol "Suara" di menu utama dan layar Jeda). Slider **Efek** mengatur lapisan **nada** dan **efek** sekaligus:
-- **Musik**: lagu sungguhan di `assets/audio/` untuk **80, 100, dan 120 BPM**; semua level memakai lagu sesuai kecepatan yang dipilih. **60 BPM belum punya lagu** (nanti diganti lagu dari Suno): untuk sementara dimainkan backing sintesis bawaan yang dibuat dari `style` + `chords` tiap level.
+- **Musik**: lagu sungguhan di `assets/audio/` untuk **60, 80, 100, dan 120 BPM** (60 BPM: "Neon Rain Drive"); semua level memakai lagu sesuai kecepatan yang dipilih. Backing sintesis bawaan (dari `style` + `chords` tiap level) hanya jadi cadangan bila file lagu gagal dimuat.
 - **Nada**: jawaban benar = **satu nada pendek** (selalu nada yang sama, langsung bunyi). Jawaban salah = nada fals satu semitone di bawahnya. Soal yang terlewat = bunyi "tuk" tanpa nada dan nada yang sedang berdering dibungkam.
 - **Efek**: bunyi hover dan klik tombol di menu utama (tick pendek saat kursor masuk, "pop" saat klik, arpeggio naik untuk tombol Main!), klik menu, dan jingle akhir level.
 - **BGM menu utama**: loop synth sederhana (C – Am – F – G, 92 BPM: pad lembut, bass, arpeggio, ketukan tipis) yang berjalan di bawah slider **Musik**. Mulai setelah klik atau tombol pertama (browser memblokir suara otomatis sebelum itu), berhenti saat game dimulai, dan menyala lagi saat kembali ke menu.
@@ -90,7 +90,7 @@ Cara lagu dipasangkan ke game: jam ketukan game berjalan tepat di BPM kesulitan,
 | `wrong.*`, `duckBeats` | seberapa fals/keras nada salah, dan berapa lama nada dibungkam setelah kesalahan |
 | `tracks[n]` | `style` + `chords` backing sintesis cadangan, dipakai hanya bila lagu gagal dimuat |
 
-Lagu (3,3–3,6 MB tiap file) dimuat saat tombol **Main** ditekan (atau lebih awal, saat kesulitan dipilih); selama itu tombol menampilkan "Memuat musik…". Bila gagal dimuat dalam 15 detik, game jalan dengan backing sintesis.
+Lagu (3,3–5,2 MB tiap file) dimuat saat tombol **Main** ditekan (atau lebih awal, saat kesulitan dipilih); selama itu tombol menampilkan "Memuat musik…". Bila gagal dimuat dalam 15 detik, game jalan dengan backing sintesis.
 
 ### Uji audio otomatis
 Buka `http://localhost:8123/tests/audio-test.html` (setelah `node serve.js`). Halaman ini me-render bunyinya secara offline lalu menganalisis sampel audionya: jawaban benar selalu satu nada yang sama dan tepat di waktunya, nada salah satu semitone di bawahnya, nada dibungkam setelah soal terlewat, backing sintesis cadangan tepat di grid dan tanpa clipping, serta ketiga lagu terdaftar dan filenya ada.

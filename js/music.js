@@ -2,9 +2,8 @@
  * Music data.
  *
  * How the sound works
- *  - The BACKING is a real song (assets/audio/*.mp3), one per tempo: 80, 100 and 120 BPM. Every level uses the song of the
- *    chosen speed (see `songs` below). 60 BPM has no song yet (a Suno track will be added later): for now the built-in
- *    synth backing made from each track's `style` / `chords` plays at 60 BPM.
+ *  - The BACKING is a real song (assets/audio/*.mp3), one per tempo: 60, 80, 100 and 120 BPM. Every level uses the song of
+ *    the chosen speed (see `songs` below).
  *  - A correct answer plays ONE short note (`correct`). A wrong answer plays a flat, detuned note a semitone below it.
  *    A missed problem plays a soft thud and silences the ringing note.
  *  - If a song cannot be loaded the game falls back to a built-in synth backing made from each track's
@@ -20,6 +19,7 @@ window.NA = window.NA || {};
 
 NA.MUSIC = {
   songs: {
+    60:  { src: 'assets/audio/60bpm.mp3',  fileBpm: 58.095,  offsetSec: 0.39 },      // "Neon Rain Drive" (Suno)
     80:  { src: 'assets/audio/80bpm.mp3',  fileBpm: 81.705,  offsetSec: 0.108 },
     100: { src: 'assets/audio/100bpm.mp3', fileBpm: 100.99,  offsetSec: 0.115 },
     120: { src: 'assets/audio/120bpm.mp3', fileBpm: 121.43,  offsetSec: 0.14 },

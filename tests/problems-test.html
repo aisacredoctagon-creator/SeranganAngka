@@ -193,6 +193,20 @@
     line(bad.length === 0, `levels 1-5: ${n} problems, 3 positive choices: consecutive one-digit numbers when the answer is one digit, otherwise all ending in the same digit${bad.length ? '<br>' + bad.slice(0, 4).join('<br>') : ''}`);
   }
 
+  // ============================================================ the right answer is not predictable: its place is spread over the 3 choices
+  {
+    const rows = [];
+    let ok = true;
+    C.levels.forEach((L, li) => {
+      const cnt = [0, 0, 0], N = 3000;
+      for (let i = 0; i < N; i++) cnt[NA.makeProblem(li, i % 5, 3).correct]++;
+      const sh = cnt.map((c) => c / N);
+      if (Math.max(...sh) > 0.45 || Math.min(...sh) < 0.2) ok = false;
+      rows.push(`${L.name} ${sh.map((x) => Math.round(x * 100) + '%').join('/')}`);
+    });
+    line(ok, `position of the right answer (1st / 2nd / 3rd choice), each level: ${rows.join(' · ')} - none above 45 %, none below 20 %`);
+  }
+
   // ============================================================ every level x tier x lane count
   const N = 700;
   C.levels.forEach((L, li) => {

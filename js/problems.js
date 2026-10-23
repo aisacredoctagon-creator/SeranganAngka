@@ -35,20 +35,22 @@
   }
   // One-digit answer: the choices are consecutive one-digit numbers (5, 6, 7). Otherwise the wrong choices are
   // ans +/- 10, 20, 30 ... (nearer ones more likely, never below 1), so all choices end in the same digit.
-  // Sorted low -> high with the right one inside.
+  // Sorted low -> high with the right one inside; the right one's place is picked at random first (see below).
   function sameEnding(ans, lanes) {
     if (ans <= 9 && lanes <= 9) {
       const lo = Math.max(1, ans - (lanes - 1)), hi = Math.min(ans, 10 - lanes);
       const start = rand(lo, Math.max(lo, hi));
       return Array.from({ length: lanes }, (_, i) => start + i);
     }
-    const pool = [];
-    for (let k = 1; k <= lanes + 3; k++) for (const s of [-1, 1]) {
-      const v = ans + s * 10 * k;
-      if (v >= 1) pool.push({ v, w: k + Math.random() * 1.6 });
-    }
-    pool.sort((a, b) => a.w - b.w);
-    return [ans, ...pool.slice(0, lanes - 1).map((x) => x.v)].sort((a, b) => a - b);
+    // The right answer's place among the choices is chosen FIRST and uniformly (lowest / middle / highest), then the wrong
+    // ones are put on the matching sides - otherwise "ans - 10, ans, ans + 10" would make the middle choice right almost always.
+    const need = lanes - 1, maxBelow = Math.floor((ans - 1) / 10);
+    const below = rand(0, Math.min(need, maxBelow));
+    const ks = (count, limit) => {                                  // distinct multipliers of 10, nearer ones likelier
+      const pool = Array.from({ length: Math.min(limit, count + 3) }, (_, i) => ({ k: i + 1, w: i + 1 + Math.random() * 1.6 }));
+      return pool.sort((x, y) => x.w - y.w).slice(0, count).map((x) => x.k);
+    };
+    return [...ks(below, maxBelow).map((k) => ans - 10 * k), ans, ...ks(need - below, 99).map((k) => ans + 10 * k)].sort((x, y) => x - y);
   }
   function assemble(text, ans, lanes, fmt) {
     const vals = sameEnding(ans, lanes);
@@ -151,8 +153,10 @@
       const slips = [P > 0 ? mkOpt(ans, P - 1) : null, P < 4 ? mkOpt(ans, P + 1) : null].filter(Boolean)
         .filter((o) => fmtO(o).slice(-1) === fmtO(answer).slice(-1));    // a slip that would end differently (87.0 vs 8.7) would give the answer away
       const slip = slips.length ? pick(slips) : null;
-      const swap = opts.map((o, i) => (o === answer ? -1 : i)).filter((i) => i >= 0);
-      if (slip && !opts.some((o) => o.key === slip.key)) opts[pick(swap)] = slip;
+      // the slip replaces a choice on ITS side of the answer, so the answer keeps its (random) place among the choices
+      const sideOf = (o) => (o.v > answer.v ? 1 : -1);
+      const room = slip ? opts.map((o, i) => (o !== answer && sideOf(o) === sideOf(slip) ? i : -1)).filter((i) => i >= 0) : [];
+      if (slip && room.length && !opts.some((o) => o.key === slip.key)) opts[pick(room)] = slip;
       if (!opts.includes(answer)) throw new Error('answer outside the choices: ' + text);
       opts.sort((x, y) => x.v - y.v);
       return { text, options: opts.map(fmtO), correct: opts.indexOf(answer), answer: fmtO(answer) };

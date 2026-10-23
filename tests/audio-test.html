@@ -213,7 +213,7 @@
   // ============================================================ 6. songs
   {
     const issues = [];
-    const diffs = (window.__diffs || [80, 100, 120]);
+    const diffs = (window.__diffs || [60, 80, 100, 120]);
     diffs.forEach((bpm) => {
       const sp = M.songs[bpm];
       if (!sp) { issues.push(bpm + ': no song'); return; }
@@ -225,7 +225,7 @@
       const r = await fetch('../' + sp.src, { method: 'HEAD' });
       if (!r.ok) issues.push(sp.src + ': HTTP ' + r.status);
     }
-    line(issues.length === 0, 'songs: 80 / 100 / 120 BPM are registered with src, measured fileBpm and first-beat offset, and the files exist' + (issues.length ? '<br>' + issues.join('<br>') : ''));
+    line(issues.length === 0, 'songs: 60 / 80 / 100 / 120 BPM are registered with src, measured fileBpm and first-beat offset, and the files exist' + (issues.length ? '<br>' + issues.join('<br>') : ''));
   }
 
   document.getElementById('summary').innerHTML = fails ? `<span class="FAIL">${fails} check(s) FAILED</span>` : '<span class="PASS">ALL CHECKS PASSED</span>';

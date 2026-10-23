@@ -92,7 +92,7 @@ NA.CONFIG = {
 
   // ===================== TEMPO ==============================================
   // The speed choices on the menu, the same for EVERY level: bpm = tempo, scoreMult = multiplier on all points (on top of
-  // the combo multiplier). 60 BPM has no song file yet (the built-in synth backing plays); 80 / 100 / 120 use assets/audio.
+  // the combo multiplier). each speed has its own song in assets/audio (see js/music.js).
   difficulties: [
     { id: 'bpm60',  label: '60 BPM',  bpm: 60,  scoreMult: 0.25 },
     { id: 'bpm80',  label: '80 BPM',  bpm: 80,  scoreMult: 0.5 },

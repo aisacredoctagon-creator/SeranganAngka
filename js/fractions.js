@@ -97,9 +97,9 @@
     shuffle(cands.filter(Boolean)).forEach(add);                                   // common mistakes first...
     for (let g = 0; wrong.length < lanes - 1 && g < 400; g++) add(filler(g));        // ...then near neighbours
     if (wrong.length < lanes - 1) throw new Error(`no options for: ${text}`);
-    const opts = [ans, ...wrong];
-    opts.forEach((o) => { o.t = Math.random(); });
-    opts.sort((a, b) => a.val - b.val || a.t - b.t);                               // low -> high, like the other levels
+    // Random ORDER (not low -> high): with the same denominator the neighbours of a small answer (1/4, 2/5 ...) only
+    // exist on one side, so a sorted list would put the right one first most of the time.
+    const opts = shuffle([ans, ...wrong]);
     const p = { text, options: opts.map((o) => o.tok), correct: opts.indexOf(ans), answer: ans.tok, meta: extra.meta };
     if (extra.solution) p.solution = extra.solution;
     return p;

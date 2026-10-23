@@ -2,8 +2,9 @@
 
 Lagu latar game, satu per tempo (dipakai semua level sesuai kesulitan):
 
-| File | Kesulitan | BPM nama | Tempo asli (hasil ukur) |
+| File | Kecepatan | BPM nama | Tempo asli (hasil ukur) |
 |---|---|---|---|
+| `60bpm.mp3` | 60 BPM ("Neon Rain Drive") | 60 | ≈ 58,1 |
 | `80bpm.mp3` | Mudah | 80 | ≈ 81,7 |
 | `100bpm.mp3` | Sedang | 100 | ≈ 101,0 |
 | `120bpm.mp3` | Susah | 120 | ≈ 121,4 |
