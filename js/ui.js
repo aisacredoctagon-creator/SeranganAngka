@@ -254,6 +254,7 @@
       const btn = $('btn-play');
       const label = btn.innerHTML;
       btn.disabled = true;                            // while the audio device wakes up and the song loads
+      btn.classList.add('loading');                   // smaller text (css .main-btn.loading)
       btn.textContent = 'Memuat musik…';
       // Start the game only when the audio clock is really running, so beat and visuals begin together.
       await Promise.race([
@@ -261,6 +262,7 @@
         new Promise((r) => setTimeout(r, 15000)),     // a slow connection: start without the song after 15 s
       ]);
       btn.innerHTML = label;
+      btn.classList.remove('loading');
       btn.disabled = false;
       show('game');
       G.start(level, diff);
@@ -333,7 +335,7 @@
         const k = x.text.lastIndexOf(' = ');
         const ask = k < 0 ? x.text : x.text.slice(0, k + 3);
         const right = k < 0 ? '' : x.text.slice(k + 3);
-        return `<li><span class="rv-q"><i class="rv-dot"></i><span class="rv-eq">${NA.fmt.html(ask)}<b class="rv-wrong">${m ? NA.fmt.html(m[1]) : '?'}</b></span></span>` +
+        return `<li><span class="rv-q"><span class="rv-eq">${NA.fmt.html(ask)}<b class="rv-wrong">${m ? NA.fmt.html(m[1]) : '?'}</b></span></span>` +
           (right ? `<span class="rv-ok">${NA.fmt.html(right)}</span>` : '') + '</li>';
       }).join('')
       : '<li class="rv-empty">Tidak ada yang salah. Keren!</li>';
