@@ -31,8 +31,8 @@ serve.js                server statis kecil untuk pengembangan lokal
 - Soal jatuh di kolom tengah; tekan jawaban yang benar **saat soal menyentuh garis**. Hanya soal terdekat dengan garis yang aktif (disorot & sedikit membesar). Garis berdenyut tiap beat.
 - Pilihan jawaban berurutan kecil → besar dan nilainya berdekatan (mis. 12, 13, 14).
 - Keyboard: 3 jalur `A W D`, 4 jalur `A W D F`, 5 jalur `A W D F J`. Layar sentuh/klik: ketuk kotak jawaban **atau kolom jalur di area permainan**. `Esc`/`P` = jeda.
-- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Telat** ±400 ms (benar tapi kurang pas, baik terlalu cepat maupun terlambat: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
-- **Kecepatan** (sama untuk semua level, dipilih di menu dengan simbol not): 60 BPM poin ×0,25 · 80 BPM ×0,5 · 100 BPM ×1 · 120 BPM ×1,5. Pengali ini dikalikan dengan pengali combo. **120 BPM terkunci** (pudar, dengan petunjuk "Kamu harus menuntaskan tahap 6") sampai pemain menamatkan satu level (menang, bukan kalah); buka langsung dengan `?unlock=all`. Kunci ini diatur lewat `locked` di `difficulties[]` pada `js/config.js`.
+- **Sempurna** ±100 ms, **Bagus** ±250 ms, **Kurang Pas** ±400 ms (benar tapi kurang pas, baik terlalu cepat maupun terlambat: poin berkurang, combo tidak putus). Salah atau soal lewat tanpa dijawab = "Kepeleset": combo putus, nyawa −1.
+- **Kecepatan** (sama untuk semua level, dipilih di menu dengan simbol not): 60 BPM poin ×0,25 · 80 BPM ×0,5 · 100 BPM ×1 · 120 BPM ×1,5. Pengali ini dikalikan dengan pengali combo. Semua kecepatan terbuka sejak awal. Sebuah kecepatan bisa dikunci lewat `locked: true, lockHint: '...'` di `difficulties[]` pada `js/config.js` (tampil pudar dengan petunjuk sampai satu level ditamatkan; `?unlock=all` membukanya).
 - Level 1–5: ketiga pilihan jawaban **berakhiran angka sama** (mis. 45, 65, 15; jawaban salah = jawaban benar ± kelipatan 10), jadi tidak bisa ditebak dari angka belakang.
 - Level Pecahan dan Desimal memakai 3 pilihan jawaban, dan ketiganya **berakhiran sama** supaya tidak bisa ditebak dari angka belakang: desimal memiliki digit terakhir yang sama (mis. 5,37 / 5,47 / 5,57), pecahan memiliki penyebut yang sama (mis. 3/8, 5/8, 7/8).
 - Tahap kesulitan naik berdasarkan jumlah jawaban benar (lihat `tiers`), dan ada jeda napas setelah 5–8 soal.
@@ -45,7 +45,7 @@ serve.js                server statis kecil untuk pengembangan lokal
 | Waktu jatuh (beat) | `approachBeats` (default 4) |
 | Jeda napas | `breather.{everyMin,everyMax,beatsMin,beatsMax}` |
 | Jendela waktu | `windows.{perfect,good,accept}` |
-| Poin / aturan combo Telat (cepat atau lambat) | `points`, `offBeat.{breaksCombo,advancesCombo}` |
+| Poin / aturan combo Kurang Pas (cepat atau lambat) | `points`, `offBeat.{breaksCombo,advancesCombo}` |
 | Tahap kesulitan (naik per **jumlah jawaban benar**, bukan skor) | `tiers[].{digits,correct}`, `defaultCorrect` (10) |
 | Kedekatan pilihan jawaban | `distractorStep` (per tahap; kecil = lebih dekat) |
 | Mode gerak | `movementMode: 'smooth' \| 'step'`, `step.moveFraction` |
@@ -101,4 +101,4 @@ Taruh file mp3 baru di `assets/audio/`, ukur tempo dan ketukan pertamanya dengan
 ## Tampilan
 UI mengikuti desain Figma "Alat Peraga Digital" bagian "Pop Play" (latar krem, outline tebal gelap, bayangan datar, aksen oranye). Semua token (warna, font, radius, outline, bayangan) ada di satu blok `:root` pada `css/style.css`. Ikon memakai Lucide (SVG inline di `js/ui.js`). Font: Rubik (angka, judul) dan Fredoka One (tombol, nama level) dari Google Fonts. Badge penilaian menampilkan poin + penilaian, mis. "+100 SEMPURNA!".
 
-Garis pemisah jalur berupa deretan not kecil yang samar (satu not, lalu sepasang not balok) dan bergerak turun secepat soal jatuh, jadi mengikuti BPM (berhenti saat jeda); garis target punya zona merah transparan di bawahnya. Judul menu dan kartu level punya animasi (dimatikan jika perangkat meminta *reduced motion*).
+Garis pemisah jalur dihiasi not kecil yang samar (satu not atau sepasang not balok) dengan ukuran, sisi, kepekatan, kecepatan, dan gelombang yang acak, melayang turun berkelok-kelok kira-kira secepat soal jatuh (mengikuti BPM, berhenti saat jeda). Badge penilaian menampilkan teksnya dulu ("BAGUS!"), lalu poinnya ("+15") sepersekian detik kemudian; garis target punya zona merah transparan di bawahnya. Judul menu dan kartu level punya animasi (dimatikan jika perangkat meminta *reduced motion*).

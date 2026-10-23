@@ -66,14 +66,57 @@
     if (S) S.pxPerBeat = (LINE_Y - SPAWN_Y) / S.approach;
     return true;
   }
-  // The notes on the lane lines scroll down at exactly the speed the problems fall (CSS animation, one pattern = 340 px).
-  function syncDash() {
-    if (!S) return;
-    el.field.style.setProperty('--dash-dur', `${(340 / (S.pxPerBeat / S.spb)).toFixed(3)}s`);
+  // ---- accent notes on the lane lines: small, faint, random, drifting down along a wavy path ---------------
+  // Moved by the game loop (not by CSS animations): nothing about a running note is ever changed in place, a note that
+  // leaves the bottom is simply put back above the top with new random looks, so there are no jumps. They fall at about
+  // the speed of the problems (+/- 12 %), sway left and right in a sine wave and tilt along it, and fade in / out at the edges.
+  const GNOTES = 5, TAU = Math.PI * 2;
+  const NOTE_SVG = [
+    '<svg width="22" height="24" viewBox="0 0 24 26" fill="currentColor" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><ellipse cx="7" cy="21" rx="4" ry="2.9" transform="rotate(-23 7 21)" stroke="none"/><path d="M10.4 20V3Q20 7 17.6 12.5" fill="none" stroke-width="1.5"/></svg>',
+    '<svg width="28" height="30" viewBox="0 0 28 30" fill="currentColor" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><ellipse cx="7" cy="25" rx="4" ry="2.9" transform="rotate(-23 7 25)" stroke="none"/><ellipse cx="20" cy="21.2" rx="4" ry="2.9" transform="rotate(-23 20 21.2)" stroke="none"/><path d="M10.4 24V6M23.4 20.2V2.2" fill="none" stroke-width="1.5"/><path d="M10.4 6.6L23.4 2.6" fill="none" stroke-width="3.6"/></svg>',
+  ];
+  let gnotes = [], gnLast = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  function gnReset(n, y) {
+    n.y = y;                                                         // above the top: a new note starts out of sight
+    n.mult = rnd(0.88, 1.12);                                        // speed relative to the problems
+    n.x0 = rnd(-16, 16);                                             // which side of the line it sits on
+    n.amp = rnd(5, 15);                                              // how far it swings
+    n.wl = rnd(180, 360);                                            // wavelength in px (so the path is the same at any speed)
+    n.ph = rnd(0, TAU);
+    n.alpha = rnd(0.16, 0.36);
+    n.scale = rnd(0.75, 1.3);
+    n.el.innerHTML = NOTE_SVG[Math.random() < 0.45 ? 1 : 0];
+  }
+  function makeAccentNotes(container) {
+    for (let k = 0; k < GNOTES; k++) {
+      const el2 = document.createElement('span');
+      el2.className = 'gnote';
+      container.appendChild(el2);
+      const n = { el: el2, y: null };
+      gnReset(n, null);
+      gnotes.push(n);
+    }
+  }
+  function gnTick(dt) {
+    if (!gnotes.length || !S) return;
+    const H = el.field.clientHeight;
+    if (!H) return;
+    const v = S.pxPerBeat / S.spb;                                   // px per second of a falling problem
+    for (const n of gnotes) {
+      if (n.y === null) n.y = rnd(-20, H);                           // first time: scattered over the whole height
+      n.y += v * n.mult * dt;
+      if (n.y > H + 30) gnReset(n, -rnd(30, 140));                   // back above the top, looking different
+      const s = Math.sin(n.ph + (n.y / n.wl) * TAU);
+      const tilt = Math.cos(n.ph + (n.y / n.wl) * TAU) * 9;           // leans along the wave
+      const fade = clamp01((n.y + 10) / 70) * clamp01((H - n.y) / 70);
+      n.el.style.transform = `translate3d(${(n.x0 + n.amp * s).toFixed(1)}px, ${n.y.toFixed(1)}px, 0) rotate(${tilt.toFixed(1)}deg) scale(${n.scale.toFixed(2)})`;
+      n.el.style.opacity = (n.alpha * fade).toFixed(3);
+    }
   }
   G.relayout = function () {
     if (!layoutMetrics() || !S) return;
-    syncDash();
     S.notes.forEach((n) => { if (n.el && !n.removed) fitNote(n.el); });
     fitPads();
   };
@@ -85,6 +128,7 @@
     keys.forEach((k, i) => { keyMap[k.code] = i; });
     el.pads.innerHTML = '';
     el.guides.innerHTML = '';
+    gnotes = [];
     el.pads.style.setProperty('--lanes', n);
     el.notes.style.setProperty('--lanes', n);
     el.guides.style.setProperty('--lanes', n);
@@ -101,6 +145,7 @@
       g.className = 'lane-guide';
       g.style.setProperty('--lc', colors[i]);
       el.guides.appendChild(g);
+      if (i > 0) { const box = document.createElement('span'); box.className = 'gnotes'; g.appendChild(box); makeAccentNotes(box); }     // accent notes on the line between lanes
 
       [pad, g].forEach((target) => {
         target.addEventListener('pointerdown', (e) => { e.preventDefault(); laneDown(i); });
@@ -154,7 +199,6 @@
     buildHearts();
     spawnDue(0);
     updateHud();
-    syncDash();
     A.start(bpm, levelIdx);
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -215,6 +259,9 @@
     processMisses(t);
     spawnDue(t);
     render(t);
+    const now = performance.now();
+    gnTick(Math.min(0.05, (now - gnLast) / 1000));                  // (a long gap, e.g. after a pause, counts as one short frame)
+    gnLast = now;
     const bp = t / S.spb;
     el.hitline.style.setProperty('--beat', bp < 0 ? 0 : Math.max(0, 1 - (bp - Math.floor(bp)) * 3.5).toFixed(3));
     if (S.finishing && t >= S.endTime) finish();
@@ -298,7 +345,7 @@
   }
 
   // ---- judging ---------------------------------------------------------------------
-  const LABELS = { perfect: 'SEMPURNA!', good: 'BAGUS!', early: 'TELAT!', late: 'TELAT!', wrong: 'KEPELESET!', pass: 'KEPELESET!' };
+  const LABELS = { perfect: 'SEMPURNA!', good: 'BAGUS!', early: 'KURANG PAS!', late: 'KURANG PAS!', wrong: 'KEPELESET!', pass: 'KEPELESET!' };
   const TONES = { perfect: 'perfect', good: 'good', early: 'off', late: 'off', wrong: 'bad', pass: 'bad' };
 
   function judge(n, kind, picked) {
@@ -335,7 +382,7 @@
       void el.field.offsetWidth;
       el.field.classList.add('shake');
     }
-    showJudge(hit ? `+${gained} ${LABELS[kind]}` : LABELS[kind], TONES[kind]);     // points + rating in one badge
+    showJudge(LABELS[kind], TONES[kind], hit ? `+${gained}` : '');     // the rating first, the points a moment later
     if (n.el) {
       n.el.classList.remove('current');
       n.el.classList.add(hit ? 'hit' : 'miss', `k-${kind}`);
@@ -353,9 +400,9 @@
     refreshPads();
   }
 
-  function showJudge(text, tone) {
+  function showJudge(text, tone, pts) {
     const j = el.judge;
-    j.textContent = text;
+    j.innerHTML = `<span class="j-label">${text}</span>` + (pts ? `<span class="j-pts">${pts}</span>` : '');      // css delays .j-pts
     j.className = `judge ${tone}`;
     void j.offsetWidth;
     j.classList.add('show');

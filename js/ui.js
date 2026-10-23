@@ -20,8 +20,11 @@
     'pause': '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>',
     'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
     'volume-1': '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path class="wave" d="M16 9a5 5 0 0 1 0 6"/>' + SLASH,
+    'sparkles': '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>' + SLASH,
     'half-note': '<circle cx="12" cy="18" r="4"/><path d="M16 18V2"/>',
     'eighth-notes': '<path d="M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19"/><circle cx="18" cy="16" r="3"/><circle cx="6" cy="19" r="3"/>',
+    // 120 BPM (Figma "lucide/sixteenth-notes" 106:924): the Lucide sixteenth-notes drawing with a third beam (32nd notes)
+    'thirty-second-notes': '<path d="M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19"/><path d="M21 5 9 8.5"/><path d="M21 8.5 9 12"/><circle cx="18" cy="16" r="3"/><circle cx="6" cy="19" r="3"/>',
     'sixteenth-notes': '<path d="M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19"/><path d="M21 6 9 9.5"/><circle cx="18" cy="16" r="3"/><circle cx="6" cy="19" r="3"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'star': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
@@ -41,7 +44,7 @@
   // (two audio buses, one control). Older saves stored melody / sfx separately: the sfx value is used for Efek.
   const CHANNELS = [
     { id: 'music', label: 'Musik', icon: 'music', buses: ['music'] },
-    { id: 'fx',    label: 'Efek',  icon: 'volume-2', buses: ['melody', 'sfx'] },
+    { id: 'fx',    label: 'Efek',  icon: 'sparkles', buses: ['melody', 'sfx'] },     // (the menu button is a speaker: a different symbol)
   ];
   save.vol = save.vol || {};
   save.mute = save.mute || {};
@@ -150,7 +153,7 @@
   }
 
   // Speed choices: a note symbol + the BPM (more flags = faster). A locked one is faded; hover / tap shows why.
-  const NOTE_ICON = { 60: 'half-note', 80: 'eighth-notes', 100: 'sixteenth-notes', 120: 'sixteenth-notes' };
+  const NOTE_ICON = { 60: 'half-note', 80: 'eighth-notes', 100: 'sixteenth-notes', 120: 'thirty-second-notes' };
   function renderDiffs() {
     const box = $('diffs');
     box.innerHTML = '';
@@ -316,7 +319,8 @@
     });
     $('res-missbadge').textContent = `${r.miss} Soal Terlewat`;
     $('res-missbadge').hidden = r.miss === 0;
-    $('res-answered').textContent = `${r.correct || 0} Soal Terjawab`;
+    $('res-answered').textContent = `${r.correct || 0}/${(r.correct || 0) + r.miss}`;               // right answers / all problems that were played
+    $('rv-sub').hidden = r.miss === 0;
     // each missed problem: "6 + 2 = <your answer, red>" and the right answer as a green chip ("?" = it ran out of time)
     $('res-review').innerHTML = r.review.length
       ? r.review.map((x) => {

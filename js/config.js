@@ -97,8 +97,8 @@ NA.CONFIG = {
     { id: 'bpm60',  label: '60 BPM',  bpm: 60,  scoreMult: 0.25 },
     { id: 'bpm80',  label: '80 BPM',  bpm: 80,  scoreMult: 0.5 },
     { id: 'bpm100', label: '100 BPM', bpm: 100, scoreMult: 1 },
-    // locked: shown faded with a hint until the player has FINISHED a level once (all 6 stages) - or open it with ?unlock=all
-    { id: 'bpm120', label: '120 BPM', bpm: 120, scoreMult: 1.5, locked: true, lockHint: 'Kamu harus menuntaskan tahap 6' },
+    // (a speed can be locked with `locked: true, lockHint: '...'`: it is then shown faded until a level has been finished once; ?unlock=all opens it)
+    { id: 'bpm120', label: '120 BPM', bpm: 120, scoreMult: 1.5 },
   ],
 
   // ===================== LEVELS ============================================
